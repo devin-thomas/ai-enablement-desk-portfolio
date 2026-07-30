@@ -23,18 +23,21 @@ import {
   type ArtifactRecord,
 } from '@ai-enablement/contracts'
 import { z } from 'zod'
+import { recruiterDemoRequest } from './recruiterDemoApi'
 
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+export const isRecruiterDemo = import.meta.env.MODE === 'recruiter'
 const healthSchema = z.object({
   ok: z.boolean(),
   providers: z.object({
-    gemini: z.enum(['configured', 'unavailable_key']),
-    n8n: z.enum(['configured', 'disabled', 'unavailable_secret']),
+    gemini: z.enum(['configured', 'unavailable_key', 'demo_fixture']),
+    n8n: z.enum(['configured', 'disabled', 'unavailable_secret', 'demo_evidence']),
     fishAudio: z.enum(['configured', 'disabled', 'unavailable_key']),
   }),
 })
 
 async function apiRequest(path: string, init?: RequestInit): Promise<unknown> {
+  if (isRecruiterDemo) return recruiterDemoRequest(path, init)
   let response: Response
   try {
     response = await fetch(`${apiBaseUrl}${path}`, init)

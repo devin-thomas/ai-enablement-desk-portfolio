@@ -2,6 +2,8 @@
 
 A synthetic portfolio demonstration of governed AI request intake, analysis, clarification, human review, automation evidence, and optional audio. It is a working vertical slice, not a production-ready enterprise system.
 
+**[Open the interactive recruiter sandbox](https://ai-desk.devthomas.site)** — no account or setup required. Each visitor receives an isolated, resettable browser copy of the synthetic scenarios.
+
 ![Persisted request queue](docs/evidence/aed-001-persisted-queue.png)
 
 ## What it demonstrates
@@ -60,6 +62,17 @@ Use **Reset demo** in the UI or `POST /api/demo/reset` to restore exactly three 
 1. Maintenance-report discovery candidate.
 2. AI writing-tool access request.
 3. High-risk employee-data request that deterministic privacy rules prevent from being approved.
+
+## Recruiter sandbox
+
+The hosted Cloudflare build is deliberately different from the trusted-server runtime. It uses validated fixtures and local browser storage so anonymous visitors cannot modify a shared database, consume paid provider quota, or encounter another visitor's data. The UI labels this boundary directly. Resetting the demo restores all three scenarios in that browser.
+
+The sandbox demonstrates the interaction contract, clarification loop, deterministic privacy override, named human decision, audit separation, and synthetic execution evidence. It does not claim to call Gemini, n8n, or Fish Audio. The server-backed implementation and live-provider evidence remain inspectable in this repository.
+
+```bash
+npm run build:recruiter
+npm run deploy:recruiter
+```
 
 ## Optional providers
 
