@@ -1,0 +1,5 @@
+{
+  "recommendedDisposition": "decline",
+  "readinessScore": 20,
+  "riskFlags": [{ "category": "privacy", "severity": "high" }]
+}

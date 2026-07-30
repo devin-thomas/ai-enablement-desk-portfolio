@@ -1,0 +1,42 @@
+{
+  "name": "AED - Request Submitted",
+  "id": "aedRequestSubmittedV1",
+  "nodes": [
+    {
+      "parameters": { "httpMethod": "POST", "path": "aed-request-submitted", "responseMode": "responseNode", "options": {} },
+      "id": "request-webhook",
+      "name": "Request Submitted",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [260, 300],
+      "webhookId": "aed-request-submitted"
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst secret = $env.AED_WEBHOOK_SECRET;\nif (!secret) throw new Error('AED_WEBHOOK_SECRET is required');\nconst body = JSON.stringify($json.body ?? {});\nconst expected = 'sha256=' + crypto.createHmac('sha256', secret).update(body).digest('hex');\nconst provided = String($json.headers?.['x-aed-signature'] ?? '');\nconst valid = provided.length === expected.length && crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(expected));\nif (!valid) throw new Error('Invalid AED webhook signature');\nreturn [{ json: { accepted: true, correlationId: $json.body.correlationId, idempotencyKey: $json.body.idempotencyKey } }];"
+      },
+      "id": "verify-signature",
+      "name": "Verify Signature",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [500, 300]
+    },
+    {
+      "parameters": { "respondWith": "json", "responseBody": "={{ { externalExecutionId: $execution.id, accepted: true, correlationId: $json.correlationId } }}", "options": {} },
+      "id": "execution-evidence",
+      "name": "Return Execution Evidence",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [740, 300]
+    }
+  ],
+  "connections": {
+    "Request Submitted": { "main": [[{ "node": "Verify Signature", "type": "main", "index": 0 }]] },
+    "Verify Signature": { "main": [[{ "node": "Return Execution Evidence", "type": "main", "index": 0 }]] }
+  },
+  "active": false,
+  "settings": { "executionOrder": "v1" },
+  "versionId": "36b0177a-9fbd-4e5f-ae56-1dd6404e90c7",
+  "meta": { "templateCredsSetupCompleted": false },
+  "tags": []
+}

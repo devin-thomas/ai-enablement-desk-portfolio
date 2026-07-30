@@ -1,0 +1,13 @@
+{
+  "title": "Maintenance field report triage",
+  "requestType": "ai_project",
+  "department": "Operations Excellence",
+  "requesterName": "Synthetic Maintenance Requester",
+  "requesterRole": "Maintenance Manager",
+  "businessProblem": "Maintenance managers receive long field reports each morning and need to identify urgent issues quickly.",
+  "desiredOutcome": "Summarize important issues and highlight which ones need immediate attention.",
+  "currentProcess": "Managers read reports manually and escalate issues from memory.",
+  "intendedUsers": ["Maintenance managers", "Reliability engineers"],
+  "dataSources": ["Synthetic field reports"],
+  "syntheticDemoSafe": true
+}

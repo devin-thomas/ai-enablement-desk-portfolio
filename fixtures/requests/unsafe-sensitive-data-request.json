@@ -1,0 +1,13 @@
+{
+  "title": "Employee records summarization",
+  "requestType": "ai_project",
+  "department": "People Operations",
+  "requesterName": "Synthetic People Ops Requester",
+  "requesterRole": "Department Manager",
+  "businessProblem": "A manager wants to upload employee medical and performance data to a public AI service for summaries.",
+  "desiredOutcome": "Automatically summarize employee records for manager review.",
+  "currentProcess": "Records are reviewed by authorized People Operations staff.",
+  "intendedUsers": ["Department managers"],
+  "dataSources": ["Employee medical records", "Employee performance records", "Public AI service"],
+  "syntheticDemoSafe": false
+}

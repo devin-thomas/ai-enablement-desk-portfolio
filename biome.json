@@ -1,0 +1,15 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.6/schema.json",
+  "files": {
+    "includes": ["src/**", "apps/**", "packages/**", "scripts/**", "vite.config.ts", "!src/**/*.css", "!**/node_modules/**", "!**/dist/**"]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": false,
+      "correctness": { "noUnusedImports": "error", "noUnusedVariables": "error" },
+      "suspicious": { "noDoubleEquals": "error", "noDuplicateObjectKeys": "error", "noExplicitAny": "off" },
+      "style": { "useNodejsImportProtocol": "error" }
+    }
+  }
+}
