@@ -76,27 +76,33 @@ function now(): string {
   return new Date().toISOString()
 }
 
-function audit(requestId: string, actorType: RequestDetail['auditEvents'][number]['actorType'], actorName: string, eventType: string, description: string) {
-  return { id: crypto.randomUUID(), requestId, actorType, actorName, eventType, description, metadata: {}, createdAt: now() }
+function audit(requestId: string, actorType: RequestDetail['auditEvents'][number]['actorType'], actorName: string, eventType: string, description: string, createdAt = now()) {
+  return { id: crypto.randomUUID(), requestId, actorType, actorName, eventType, description, metadata: {}, createdAt }
+}
+
+function demoTimestamp(minutesAgo: number): string {
+  return new Date(Date.now() - minutesAgo * 60_000).toISOString()
 }
 
 function freshState(): DemoState {
-  const createdAt = now()
-  const requests = seedSubmissions.map(({ id, ...submission }) => ({
+  const requests = seedSubmissions.map(({ id, ...submission }, index) => {
+    const createdAt = demoTimestamp([34, 18, 7][index] ?? 3)
+    return {
     ...submission,
     id,
     status: 'submitted' as const,
     version: 1,
     submittedAt: createdAt,
     updatedAt: createdAt,
-    auditEvents: [audit(id, 'requester', submission.requesterName, 'request_submitted', 'Synthetic request submitted in the isolated recruiter sandbox.')],
-  }))
+    auditEvents: [audit(id, 'requester', submission.requesterName, 'request_submitted', 'Synthetic request submitted in the isolated recruiter sandbox.', createdAt)],
+    }
+  })
   return {
     requests,
     analyses: Object.fromEntries(requests.map((request) => [request.id, []])),
     clarificationAnswers: Object.fromEntries(requests.map((request) => [request.id, []])),
     decisions: Object.fromEntries(requests.map((request) => [request.id, []])),
-    automations: Object.fromEntries(requests.map((request) => [request.id, [automation(request.id, 'request-submitted')]])),
+    automations: Object.fromEntries(requests.map((request) => [request.id, [automation(request.id, 'request-submitted', request.submittedAt)]])),
     artifacts: Object.fromEntries(requests.map((request) => [request.id, []])),
   }
 }
@@ -121,8 +127,7 @@ function saveState(state: DemoState): void {
   localStorage.setItem(storageKey, JSON.stringify(state))
 }
 
-function automation(requestId: string, automationName: AutomationAttempt['automationName']): AutomationAttempt {
-  const timestamp = now()
+function automation(requestId: string, automationName: AutomationAttempt['automationName'], timestamp = now()): AutomationAttempt {
   return {
     id: crypto.randomUUID(), requestId, automationName, workflowVersion: 'recruiter-sandbox-v1', correlationId: crypto.randomUUID(),
     idempotencyKey: `${automationName}:${requestId}`, attemptNumber: 1, status: 'success', startedAt: timestamp, completedAt: timestamp,

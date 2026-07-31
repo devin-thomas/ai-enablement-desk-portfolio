@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Activity, ArrowUpRight, ChevronDown, FileClock, Gauge, Headphones, LayoutDashboard, LockKeyhole, Plus, RefreshCw, Search, Settings2, ShieldAlert, Sparkles, Workflow, X } from 'lucide-react'
+import { Activity, ArrowUpRight, FileClock, Headphones, LockKeyhole, Plus, RefreshCw, Search, ShieldAlert, Sparkles, Workflow, X } from 'lucide-react'
 import { requestSubmissionSchema, type AnalysisRun, type ArtifactRecord, type AutomationAttempt, type ClarificationAnswerRecord, type ClarificationAnswerSubmission, type DecisionRecord, type HumanDecision, type RequestDetail, type RequestRecord, type RequestSubmission } from '@ai-enablement/contracts'
 import { answerClarification, generateAudioBriefing, getHealth, getRequest, isRecruiterDemo, listAnalyses, listArtifacts, listAutomations, listDecisions, listRequests, recordDecision, resetDemo, retryAutomation, runAnalysis, submitRequest } from './api'
 
@@ -11,6 +11,15 @@ const blankForm: RequestSubmission = {
 
 function statusLabel(status: RequestRecord['status']): string {
   return status.split('_').map((word) => word[0].toUpperCase() + word.slice(1)).join(' ')
+}
+
+function requestTypeLabel(requestType: RequestRecord['requestType']): string {
+  return requestType === 'ai_project' ? 'AI project' : requestType === 'tool_access' ? 'Tool access' : requestType.replace('_', ' ')
+}
+
+function displayRequestId(id: string): string {
+  const digits = id.replace(/\D/g, '')
+  return digits.slice(-6).padStart(6, '0')
 }
 
 function App() {
@@ -28,13 +37,17 @@ function App() {
   const [artifacts, setArtifacts] = useState<ArtifactRecord[]>([])
   const [audioBusy, setAudioBusy] = useState(false)
   const [query, setQuery] = useState('')
+  const [requestTypeFilter, setRequestTypeFilter] = useState<RequestRecord['requestType'] | 'all'>('all')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showNewRequest, setShowNewRequest] = useState(false)
   const [resetting, setResetting] = useState(false)
 
-  const filteredRequests = useMemo(() => requests.filter((request) =>
-    `${request.title} ${request.department} ${request.requesterName}`.toLowerCase().includes(query.toLowerCase())), [requests, query])
+  const filteredRequests = useMemo(() => requests.filter((request) => {
+    const matchesType = requestTypeFilter === 'all' || request.requestType === requestTypeFilter
+    const matchesQuery = `${request.title} ${request.department} ${request.requesterName}`.toLowerCase().includes(query.toLowerCase())
+    return matchesType && matchesQuery
+  }), [requests, query, requestTypeFilter])
 
   async function loadQueue(preferredId?: string) {
     setLoading(true)
@@ -126,19 +139,7 @@ function App() {
     finally { setAudioBusy(false) }
   }
 
-  const navItems = [
-    { label: 'Intake queue', icon: LayoutDashboard, count: String(requests.length) },
-    { label: 'AI projects', icon: Workflow }, { label: 'Tool access', icon: LockKeyhole },
-    { label: 'Governance', icon: Gauge }, { label: 'Audit trail', icon: FileClock },
-  ]
-
   return <div className="app-shell">
-    <aside className="sidebar">
-      <div className="brand"><div className="brand-mark"><Sparkles size={16} /></div><div><strong>AI Enablement</strong><span>DEFENSIBLE DEMO</span></div></div>
-      <div className="workspace-switcher"><span className="workspace-dot" />Synthetic workspace<ChevronDown size={14} /></div>
-      <nav className="nav-list">{navItems.map(({ label, icon: Icon, count }) => <button disabled={label !== 'Intake queue'} className={label === 'Intake queue' ? 'nav-item active' : 'nav-item'} key={label}><Icon size={17} /><span>{label}</span>{count && <em>{count}</em>}</button>)}</nav>
-      <div className="sidebar-bottom"><button className="nav-item" disabled><Headphones size={17} /><span>Support playbook</span></button><button className="nav-item" disabled><Settings2 size={17} /><span>Desk settings</span></button><div className="profile"><div className="avatar">DR</div><div><strong>Demo Reviewer</strong><span>Local identity</span></div><ArrowUpRight size={15} /></div></div>
-    </aside>
     <main className="main-content">
       <header className="topbar"><div className="breadcrumbs"><span>Operations</span><span>/</span><strong>Intake queue</strong></div><div className="topbar-links">{isRecruiterDemo && <><a href="https://devthomas.site">Portfolio</a><a href="https://github.com/devin-thomas/ai-enablement-desk-portfolio" target="_blank" rel="noreferrer">Source <ArrowUpRight size={13} /></a></>}<div className="system-status"><span className="pulse" />{isRecruiterDemo ? 'Private browser sandbox' : 'Persisted request service'}</div></div></header>
       {isRecruiterDemo && <section className="recruiter-guide"><div><span>RECRUITER SANDBOX</span><strong>Try the governed workflow in about 90 seconds.</strong><p>Your changes stay in this browser. No account, real employee data, paid AI call, or shared database is involved.</p></div><ol><li><b>1</b> Run analysis</li><li><b>2</b> Answer the clarification</li><li><b>3</b> Re-run and review</li></ol></section>}
@@ -147,7 +148,14 @@ function App() {
       {error && <div className="error-banner" role="alert"><span>{error}</span><button onClick={() => void loadQueue()}><RefreshCw size={14} />Retry</button></div>}
       <div className="content-grid">
         <section className="request-list-panel"><div className="panel-heading"><div><h2>Requests</h2><span>{filteredRequests.length} visible</span></div><label className="search-box"><Search size={15} /><input aria-label="Search requests" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search queue" /></label></div>
-          {loading ? <PanelState title="Loading requests…" /> : filteredRequests.length === 0 ? <PanelState title={requests.length === 0 ? 'No requests yet' : 'No matching requests'} /> : <div className="request-list">{filteredRequests.map((request) => <button className={request.id === selectedId ? 'request-row selected' : 'request-row'} key={request.id} onClick={() => void selectRequest(request.id)}><div className="row-top"><span className="request-id">{request.id.slice(0, 8)}</span><span className="status compact blue"><span />{statusLabel(request.status)}</span></div><strong>{request.title}</strong><span className="row-meta">{request.department} · {new Date(request.submittedAt).toLocaleString()}</span></button>)}</div>}
+          <div className="request-filters" aria-label="Filter requests by category">
+            {(['all', 'ai_project', 'tool_access'] as const).map((filter) => {
+              const count = filter === 'all' ? requests.length : requests.filter((request) => request.requestType === filter).length
+              const label = filter === 'all' ? 'All requests' : requestTypeLabel(filter)
+              return <button key={filter} className={requestTypeFilter === filter ? 'request-filter active' : 'request-filter'} aria-pressed={requestTypeFilter === filter} onClick={() => setRequestTypeFilter(filter)}>{label}<span>{count}</span></button>
+            })}
+          </div>
+          {loading ? <PanelState title="Loading requests…" /> : filteredRequests.length === 0 ? <PanelState title={requests.length === 0 ? 'No requests yet' : 'No matching requests'} /> : <div className="request-list">{filteredRequests.map((request) => <button className={request.id === selectedId ? 'request-row selected' : 'request-row'} key={request.id} onClick={() => void selectRequest(request.id)}><div className="row-top"><span className="request-id">{displayRequestId(request.id)}</span><span className={`request-type-label ${request.requestType}`}>{requestTypeLabel(request.requestType)}</span><span className="status compact blue"><span />{statusLabel(request.status)}</span></div><strong>{request.title}</strong><span className="row-meta">{request.department} · {new Date(request.submittedAt).toLocaleString()}</span></button>)}</div>}
         </section>
         <section className="detail-panel">{selected ? <RequestDetailView request={selected} analyses={analyses} clarificationAnswers={clarificationAnswers} decisions={decisions} automations={automations} artifacts={artifacts} analysisBusy={analysisBusy} audioBusy={audioBusy} onAnalyze={handleAnalysis} onAnswer={handleClarification} onDecision={handleDecision} onAutomationRetry={handleAutomationRetry} onAudio={handleAudio} /> : <PanelState title={loading ? 'Loading request…' : 'Select or submit a request'} />}</section>
       </div>
@@ -163,9 +171,9 @@ function RequestDetailView({ request, analyses, clarificationAnswers, decisions,
   const latest = analyses[0]
   const canAnalyze = ['submitted', 'needs_clarification', 'analysis_failed'].includes(request.status)
   return <>
-    <div className="detail-header"><div><div className="detail-id">{request.id} <span>·</span> {request.requestType === 'ai_project' ? 'AI project' : 'Tool access'}</div><h2>{request.title}</h2><p>Submitted by {request.requesterName} · {request.department}</p></div><button className="secondary-button" disabled={!canAnalyze || analysisBusy} onClick={() => void onAnalyze()}><Sparkles size={14} />{analysisBusy ? 'Analyzing…' : analyses.length ? 'Re-run analysis' : 'Run analysis'}</button></div>
+    <div className="detail-header"><div><div className={`request-type-banner ${request.requestType}`}><span>Request category</span><strong>{requestTypeLabel(request.requestType)}</strong></div><div className="detail-id">{displayRequestId(request.id)} <span>·</span> {requestTypeLabel(request.requestType)}</div><h2>{request.title}</h2><p>Submitted by {request.requesterName} · {request.department}</p></div><button className="secondary-button" disabled={!canAnalyze || analysisBusy} onClick={() => void onAnalyze()}><Sparkles size={14} />{analysisBusy ? 'Analyzing…' : analyses.length ? 'Re-run analysis' : 'Run analysis'}</button></div>
     <div className="status-line"><span className="status blue"><span />{statusLabel(request.status)}</span><span className="status-copy">Updated {new Date(request.updatedAt).toLocaleString()}</span></div>
-    <div className="advisory-note"><ShieldAlert size={16} /><strong>AI recommendations are advisory.</strong> Deterministic rules and a named human reviewer own routing and decisions.</div>
+    <div className="advisory-note"><ShieldAlert size={16} /><strong>AI recommendations are advisory.</strong> // Deterministic rules and a named human reviewer own routing and decisions.</div>
     <div className="summary-block"><div className="summary-label"><Workflow size={15} />Business problem</div><p>{request.businessProblem}</p></div>
     <div className="field-grid"><DetailField label="Desired outcome" value={request.desiredOutcome} /><DetailField label="Requester role" value={request.requesterRole} /><DetailField label="Intended users" value={request.intendedUsers.join(', ')} /><DetailField label="Data sources" value={request.dataSources.join(', ')} /></div>
     {latest ? <AnalysisView run={latest} request={request} clarificationAnswers={clarificationAnswers} onAnswer={onAnswer} /> : <div className="analysis-empty"><Sparkles size={18} /><div><strong>No analysis history</strong><span>{isRecruiterDemo ? 'Run the schema-valid demo analysis to begin the guided workflow.' : 'Run advisory analysis when the server-side provider is configured.'}</span></div></div>}
@@ -208,8 +216,8 @@ function ReviewerWorkspace({ request, analyses, decisions, onDecision }: { reque
     finally { setSaving(null) }
   }
   return <section className="review-workspace">
-    <div className="analysis-heading"><div><p className="eyebrow">Named human control</p><h3>Reviewer decision</h3></div><span>Request version {request.version}</span></div>
-    <p className="analysis-summary">{isRecruiterDemo ? 'A decision is bound to the latest successful analysis and request version. The sandbox applies the same transition and governance rules locally.' : 'A decision is bound to the latest successful analysis and this request version. The server rechecks legal transitions and governance eligibility.'}</p>
+    <div className="analysis-heading"><div><h3>Reviewer decision</h3></div><span>Request version {request.version}</span></div>
+    <p className="analysis-summary">// {isRecruiterDemo ? 'A decision is bound to the latest successful analysis and request version. The sandbox applies the same transition and governance rules locally.' : 'A decision is bound to the latest successful analysis and this request version. The server rechecks legal transitions and governance eligibility.'}</p>
     <div className="review-inputs"><label>Reviewer identity<input value={reviewerName} onChange={(event) => setReviewerName(event.target.value)} /></label><label>Required rationale<textarea value={rationale} onChange={(event) => setRationale(event.target.value)} placeholder="Explain the evidence and governance basis for this decision" /></label></div>
     <div className="decision-actions">{actionRules.map((action) => <div key={action.decision}><button disabled={!action.available || !formValid || saving !== null} title={action.available ? 'Requires reviewer identity and rationale.' : action.reason} onClick={() => void submit(action.decision)}>{saving === action.decision ? 'Recording…' : action.label}</button>{!action.available && <small>{action.reason}</small>}</div>)}</div>
     {!formValid && <p className="review-requirement">Enter a named reviewer and at least 10 characters of rationale to enable an available action.</p>}
