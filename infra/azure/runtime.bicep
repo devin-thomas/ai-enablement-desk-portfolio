@@ -375,6 +375,7 @@ resource acaReadinessRevisionRestartAlert 'Microsoft.Insights/scheduledQueryRule
     description: 'A Container Apps platform event indicates an unhealthy API revision.'
     severity: 1
     enabled: true
+    skipQueryValidation: true
     evaluationFrequency: 'PT5M'
     windowSize: 'PT5M'
     scopes: [
