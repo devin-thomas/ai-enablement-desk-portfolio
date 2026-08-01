@@ -201,9 +201,9 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = if (deployWo
             { name: 'DATABASE_URL', secretRef: 'database-url' }
             { name: 'WORKSPACE_COOKIE_SECRET', secretRef: 'workspace-signing-key' }
             { name: 'AZURE_ORIGIN_CREDENTIAL', secretRef: 'origin-shared-secret' }
-            { name: 'GEMINI_PUBLIC_LAUNCH_APPROVED', value: string(settings.geminiPublicLaunchApproved) }
-            { name: 'FISH_VOICE_PREFLIGHT_APPROVED', value: string(settings.fishVoicePreflightApproved) }
-            { name: 'AUDIO_BRIEFINGS_ENABLED', value: string(settings.audioBriefingsEnabled) }
+            { name: 'GEMINI_PUBLIC_LAUNCH_APPROVED', value: settings.geminiPublicLaunchApproved ? 'true' : 'false' }
+            { name: 'FISH_VOICE_PREFLIGHT_APPROVED', value: settings.fishVoicePreflightApproved ? 'true' : 'false' }
+            { name: 'AUDIO_BRIEFINGS_ENABLED', value: settings.audioBriefingsEnabled ? 'true' : 'false' }
           ], empty(geminiApiKey) ? [] : [
             { name: 'GEMINI_API_KEY', secretRef: 'gemini-api-key' }
           ], empty(fishApiKey) ? [] : [
