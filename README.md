@@ -84,6 +84,8 @@ npm run deploy:recruiter
 Changes on the `cloudflare-preview` branch can be deployed to an isolated
 `*.workers.dev` Worker without changing the production custom domain:
 
+**[Open the Cloudflare preview](https://ai-enablement-desk-portfolio-preview.uppercut-labs.workers.dev)**
+
 ```bash
 npm run deploy:preview
 ```
