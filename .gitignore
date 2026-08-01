@@ -4,6 +4,7 @@ dist/
 .env
 .env.*
 !.env.example
+infra/azure/*.private.json
 vite-smoke.log
 tmp/
 data/
