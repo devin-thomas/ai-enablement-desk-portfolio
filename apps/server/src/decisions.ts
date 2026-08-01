@@ -44,16 +44,16 @@ const targetStatuses: Record<HumanDecision['decision'], RequestStatus> = {
   approve_for_discovery: 'approved_for_discovery', defer: 'deferred', decline: 'declined', request_clarification: 'needs_clarification',
 }
 
-export async function listDecisions(database: Database, requestId: string): Promise<DecisionRecord[]> {
-  const request = await database.query('select id from ai_requests where id = $1', [requestId])
+export async function listDecisions(database: Database, workspaceId: string, requestId: string): Promise<DecisionRecord[]> {
+  const request = await database.query('select id from ai_requests where id = $1 and workspace_id = $2', [requestId, workspaceId])
   if (request.rows.length === 0) throw new DecisionRequestError(404, 'Request not found', 'request_not_found')
   const result = await database.query<DecisionRow>('select * from decisions where request_id = $1 order by created_at, id', [requestId])
   return result.rows.map(mapDecision)
 }
 
-export async function recordDecision(database: Database, requestId: string, submission: HumanDecision): Promise<DecisionRecord> {
+export async function recordDecision(database: Database, workspaceId: string, requestId: string, submission: HumanDecision): Promise<DecisionRecord> {
   return database.transaction(async (transaction) => {
-    const requestResult = await transaction.query<ReviewRequestRow>('select id, status, version, request_type from ai_requests where id = $1', [requestId])
+    const requestResult = await transaction.query<ReviewRequestRow>('select id, status, version, request_type from ai_requests where id = $1 and workspace_id = $2', [requestId, workspaceId])
     if (requestResult.rows.length === 0) throw new DecisionRequestError(404, 'Request not found', 'request_not_found')
     const request = requestResult.rows[0]
     if (request.version !== submission.expectedVersion) throw new DecisionRequestError(409, 'The request changed after this review was loaded. Refresh and review the latest evidence.', 'stale_request_version')
@@ -69,7 +69,7 @@ export async function recordDecision(database: Database, requestId: string, subm
 
     if (submission.decision === 'approve_for_discovery') assertApprovalEligible(request, analysis)
 
-    const updated = await transaction.query<{ version: number }>('update ai_requests set status = $3, version = version + 1, updated_at = now() where id = $1 and version = $2 returning version', [requestId, submission.expectedVersion, nextStatus])
+    const updated = await transaction.query<{ version: number }>('update ai_requests set status = $3, version = version + 1, updated_at = now() where id = $1 and workspace_id = $4 and version = $2 returning version', [requestId, submission.expectedVersion, nextStatus, workspaceId])
     if (updated.rows.length === 0) throw new DecisionRequestError(409, 'Another reviewer recorded a decision first. Refresh before continuing.', 'concurrent_decision')
     const resultingVersion = Number(updated.rows[0].version)
     const inserted = await transaction.query<DecisionRow>(`insert into decisions (

@@ -88,8 +88,8 @@ function mapClarification(row: ClarificationRow): ClarificationAnswerRecord {
   }
 }
 
-export async function listAnalyses(database: Database, requestId: string): Promise<{ analyses: AnalysisRun[]; clarificationAnswers: ClarificationAnswerRecord[] }> {
-  if (!await getRequest(database, requestId)) throw new AnalysisRequestError(404, 'Request not found', 'request_not_found')
+export async function listAnalyses(database: Database, workspaceId: string, requestId: string): Promise<{ analyses: AnalysisRun[]; clarificationAnswers: ClarificationAnswerRecord[] }> {
+  if (!await getRequest(database, workspaceId, requestId)) throw new AnalysisRequestError(404, 'Request not found', 'request_not_found')
   const [analyses, clarifications] = await Promise.all([
     database.query<AnalysisRow>('select * from analysis_runs where request_id = $1 order by created_at desc, id desc', [requestId]),
     database.query<ClarificationRow>('select * from clarification_answers where request_id = $1 order by created_at, id', [requestId]),
@@ -97,13 +97,13 @@ export async function listAnalyses(database: Database, requestId: string): Promi
   return { analyses: analyses.rows.map(mapAnalysis), clarificationAnswers: clarifications.rows.map(mapClarification) }
 }
 
-export async function runAnalysis(database: Database, provider: AnalysisProvider, requestId: string): Promise<AnalysisRun> {
-  const detail = await getRequest(database, requestId)
+export async function runAnalysis(database: Database, provider: AnalysisProvider, workspaceId: string, requestId: string): Promise<AnalysisRun> {
+  const detail = await getRequest(database, workspaceId, requestId)
   if (!detail) throw new AnalysisRequestError(404, 'Request not found', 'request_not_found')
   if (!['submitted', 'needs_clarification', 'analysis_failed'].includes(detail.status)) {
     throw new AnalysisRequestError(409, `Request cannot be analyzed from status ${detail.status}.`, 'analysis_not_allowed')
   }
-  const clarificationAnswers = (await listAnalyses(database, requestId)).clarificationAnswers
+  const clarificationAnswers = (await listAnalyses(database, workspaceId, requestId)).clarificationAnswers
 
   try {
     const providerResult = await provider.analyze({ request: detail, clarificationAnswers })
@@ -188,8 +188,8 @@ async function insertAudit(database: DatabaseSession, requestId: string, actorTy
     values ($1,$2,$3,$4,$5,$6::jsonb)`, [requestId, actorType, actorName, eventType, description, JSON.stringify(metadata)])
 }
 
-export async function answerClarification(database: Database, requestId: string, submission: ClarificationAnswerSubmission): Promise<ClarificationAnswerRecord> {
-  const history = await listAnalyses(database, requestId)
+export async function answerClarification(database: Database, workspaceId: string, requestId: string, submission: ClarificationAnswerSubmission): Promise<ClarificationAnswerRecord> {
+  const history = await listAnalyses(database, workspaceId, requestId)
   const question = history.analyses.flatMap((run) => run.modelAnalysis?.clarificationQuestions ?? []).find((item) => item.id === submission.questionId)
   if (!question) throw new AnalysisRequestError(404, 'Clarification question not found', 'clarification_not_found')
   return database.transaction(async (transaction) => {

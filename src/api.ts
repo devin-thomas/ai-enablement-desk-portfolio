@@ -25,7 +25,7 @@ import {
 import { z } from 'zod'
 import { recruiterDemoRequest } from './recruiterDemoApi'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001'
+const apiBaseUrl = import.meta.env.DEV ? import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001' : ''
 export const isRecruiterDemo = import.meta.env.MODE === 'recruiter'
 const healthSchema = z.object({
   ok: z.boolean(),
@@ -40,7 +40,7 @@ async function apiRequest(path: string, init?: RequestInit): Promise<unknown> {
   if (isRecruiterDemo) return recruiterDemoRequest(path, init)
   let response: Response
   try {
-    response = await fetch(`${apiBaseUrl}${path}`, init)
+    response = await fetch(`${apiBaseUrl}${path}`, { ...init, credentials: 'include' })
   } catch {
     throw new Error('The request service is unavailable. Check the server and try again.')
   }

@@ -56,8 +56,8 @@ export class AutomationDispatcher {
     return finalAttempt
   }
 
-  async retry(requestId: string, attemptId: string): Promise<AutomationAttempt> {
-    const result = await this.database.query<AutomationRow>('select * from automation_attempts where id = $1 and request_id = $2', [attemptId, requestId])
+  async retry(workspaceId: string, requestId: string, attemptId: string): Promise<AutomationAttempt> {
+    const result = await this.database.query<AutomationRow>('select automation_attempts.* from automation_attempts join ai_requests on ai_requests.id = automation_attempts.request_id where automation_attempts.id = $1 and automation_attempts.request_id = $2 and ai_requests.workspace_id = $3', [attemptId, requestId, workspaceId])
     if (result.rows.length === 0) throw new AutomationRequestError(404, 'Automation attempt not found', 'attempt_not_found')
     const row = result.rows[0]
     if (row.automation_name === 'generate-audio-briefing') throw new AutomationRequestError(409, 'Retry audio from the audio briefing action.', 'audio_retry_required')
@@ -130,8 +130,8 @@ function mapAttempt(row: AutomationRow): AutomationAttempt {
   }
 }
 
-export async function listAutomations(database: Database, requestId: string): Promise<AutomationAttempt[]> {
-  const request = await database.query('select id from ai_requests where id = $1', [requestId])
+export async function listAutomations(database: Database, workspaceId: string, requestId: string): Promise<AutomationAttempt[]> {
+  const request = await database.query('select id from ai_requests where id = $1 and workspace_id = $2', [requestId, workspaceId])
   if (request.rows.length === 0) throw new AutomationRequestError(404, 'Request not found', 'request_not_found')
   const result = await database.query<AutomationRow>('select * from automation_attempts where request_id = $1 order by started_at, id', [requestId])
   return result.rows.map(mapAttempt)

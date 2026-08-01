@@ -20,6 +20,8 @@ export type ServerEnv = {
   fishAudioModel?: string
   audioBriefingsEnabled?: boolean
   databaseUrl?: string
+  workspaceCookieSecret?: string
+  azureOriginCredential?: string
   demoDatabasePath: string
 }
 
@@ -61,6 +63,8 @@ export function loadEnv(): ServerEnv {
     fishAudioModel: optional('FISH_AUDIO_MODEL') ?? 's2.1-pro-free',
     audioBriefingsEnabled: process.env.AUDIO_BRIEFINGS_ENABLED === 'true',
     databaseUrl: optional('DATABASE_URL'),
+    workspaceCookieSecret: optional('WORKSPACE_COOKIE_SECRET'),
+    azureOriginCredential: optional('AZURE_ORIGIN_CREDENTIAL'),
     demoDatabasePath: process.env.DEMO_DATABASE_PATH?.trim() || 'data/ai-enablement-demo',
   }
 }

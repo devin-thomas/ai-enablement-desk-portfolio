@@ -3,6 +3,7 @@ import type { Database, DatabaseSession } from './database.js'
 
 type RequestRow = {
   id: string
+  workspace_id: string
   title: string
   raw_request: RequestSubmission
   request_type: RequestRecord['requestType']
@@ -71,19 +72,19 @@ function mapAudit(row: AuditRow): AuditEventRecord {
   }
 }
 
-const requestColumns = `id, title, raw_request, request_type, department, requester_name, requester_role,
+const requestColumns = `id, workspace_id, title, raw_request, request_type, department, requester_name, requester_role,
   business_problem, desired_outcome, current_process, intended_users, data_sources, submitted_at, updated_at, status, version, synthetic_demo_safe`
 
-export async function createRequest(database: Database, submission: RequestSubmission): Promise<RequestDetail> {
+export async function createRequest(database: Database, workspaceId: string, submission: RequestSubmission): Promise<RequestDetail> {
   return database.transaction(async (transaction) => {
     const inserted = await transaction.query<RequestRow>(`insert into ai_requests (
       title, raw_request, request_type, department, requester_name, requester_role, business_problem,
-      desired_outcome, current_process, intended_users, data_sources, synthetic_demo_safe
-    ) values ($1, $2::jsonb, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12)
+      desired_outcome, current_process, intended_users, data_sources, synthetic_demo_safe, workspace_id
+    ) values ($1, $2::jsonb, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11::jsonb, $12, $13)
     returning ${requestColumns}`, [
       submission.title, JSON.stringify(submission), submission.requestType, submission.department,
       submission.requesterName, submission.requesterRole, submission.businessProblem, submission.desiredOutcome,
-      submission.currentProcess, JSON.stringify(submission.intendedUsers), JSON.stringify(submission.dataSources), submission.syntheticDemoSafe,
+      submission.currentProcess, JSON.stringify(submission.intendedUsers), JSON.stringify(submission.dataSources), submission.syntheticDemoSafe, workspaceId,
     ])
     const request = mapRequest(inserted.rows[0])
     const audit = await insertSubmissionAudit(transaction, request)
@@ -101,30 +102,29 @@ async function insertSubmissionAudit(database: DatabaseSession, request: Request
   return mapAudit(inserted.rows[0])
 }
 
-export async function listRequests(database: Database): Promise<RequestRecord[]> {
-  const result = await database.query<RequestRow>(`select ${requestColumns} from ai_requests order by submitted_at desc, id desc`)
+export async function listRequests(database: Database, workspaceId: string): Promise<RequestRecord[]> {
+  const result = await database.query<RequestRow>(`select ${requestColumns} from ai_requests where workspace_id = $1 order by submitted_at desc, id desc`, [workspaceId])
   return result.rows.map(mapRequest)
 }
 
-export async function getRequest(database: Database, id: string): Promise<RequestDetail | null> {
-  const requestResult = await database.query<RequestRow>(`select ${requestColumns} from ai_requests where id = $1`, [id])
+export async function getRequest(database: Database, workspaceId: string, id: string): Promise<RequestDetail | null> {
+  const requestResult = await database.query<RequestRow>(`select ${requestColumns} from ai_requests where id = $1 and workspace_id = $2`, [id, workspaceId])
   if (requestResult.rows.length === 0) return null
   const auditResult = await database.query<AuditRow>('select * from audit_events where request_id = $1 order by created_at, id', [id])
   return { ...mapRequest(requestResult.rows[0]), auditEvents: auditResult.rows.map(mapAudit) }
 }
 
-export async function listAuditEvents(database: Database, id: string): Promise<AuditEventRecord[]> {
-  const request = await database.query('select id from ai_requests where id = $1', [id])
+export async function listAuditEvents(database: Database, workspaceId: string, id: string): Promise<AuditEventRecord[]> {
+  const request = await database.query('select id from ai_requests where id = $1 and workspace_id = $2', [id, workspaceId])
   if (request.rows.length === 0) return []
   const auditResult = await database.query<AuditRow>('select * from audit_events where request_id = $1 order by created_at, id', [id])
   return auditResult.rows.map(mapAudit)
 }
 
-export async function resetDemo(database: Database, submissions: RequestSubmission[]): Promise<RequestRecord[]> {
+export async function resetDemo(database: Database, workspaceId: string, submissions: RequestSubmission[]): Promise<RequestRecord[]> {
   await database.transaction(async (transaction) => {
-    await transaction.query('delete from audit_events')
-    await transaction.query('delete from ai_requests')
+    await transaction.query('delete from ai_requests where workspace_id = $1', [workspaceId])
   })
-  for (const submission of submissions) await createRequest(database, submission)
-  return listRequests(database)
+  for (const submission of submissions) await createRequest(database, workspaceId, submission)
+  return listRequests(database, workspaceId)
 }

@@ -62,8 +62,8 @@ export class AudioRequestError extends Error {
   constructor(readonly status: number, message: string, readonly code: string) { super(message) }
 }
 
-export async function generateAudioBriefing(database: Database, env: ServerEnv, provider: AudioProvider, requestId: string): Promise<ArtifactRecord> {
-  const requestResult = await database.query<{ id: string; synthetic_demo_safe: boolean }>('select id, synthetic_demo_safe from ai_requests where id = $1', [requestId])
+export async function generateAudioBriefing(database: Database, env: ServerEnv, provider: AudioProvider, workspaceId: string, requestId: string): Promise<ArtifactRecord> {
+  const requestResult = await database.query<{ id: string; synthetic_demo_safe: boolean }>('select id, synthetic_demo_safe from ai_requests where id = $1 and workspace_id = $2', [requestId, workspaceId])
   if (requestResult.rows.length === 0) throw new AudioRequestError(404, 'Request not found', 'request_not_found')
   if (!requestResult.rows[0].synthetic_demo_safe) throw new AudioRequestError(403, 'Audio is restricted to explicitly synthetic demo-safe requests.', 'request_not_demo_safe')
   const analysisResult = await database.query<{ id: string; summary: string }>("select id, summary from analysis_runs where request_id = $1 and outcome = 'success' order by created_at desc, id desc limit 1", [requestId])
@@ -120,13 +120,13 @@ function mapArtifact(row: ArtifactRow): ArtifactRecord {
   }
 }
 
-export async function listArtifacts(database: Database, requestId: string): Promise<ArtifactRecord[]> {
-  const result = await database.query<ArtifactRow>("select * from artifacts where request_id = $1 and status = 'success' and artifact_data is not null order by created_at", [requestId])
+export async function listArtifacts(database: Database, workspaceId: string, requestId: string): Promise<ArtifactRecord[]> {
+  const result = await database.query<ArtifactRow>("select artifacts.* from artifacts join ai_requests on ai_requests.id = artifacts.request_id where artifacts.request_id = $1 and ai_requests.workspace_id = $2 and artifacts.status = 'success' and artifacts.artifact_data is not null order by artifacts.created_at", [requestId, workspaceId])
   return result.rows.map(mapArtifact)
 }
 
-export async function getArtifactContent(database: Database, artifactId: string): Promise<{ bytes: Uint8Array; mimeType: string } | null> {
-  const result = await database.query<ArtifactRow>('select * from artifacts where id = $1 and status = $2 and artifact_data is not null', [artifactId, 'success'])
+export async function getArtifactContent(database: Database, workspaceId: string, artifactId: string): Promise<{ bytes: Uint8Array; mimeType: string } | null> {
+  const result = await database.query<ArtifactRow>('select artifacts.* from artifacts join ai_requests on ai_requests.id = artifacts.request_id where artifacts.id = $1 and ai_requests.workspace_id = $2 and artifacts.status = $3 and artifacts.artifact_data is not null', [artifactId, workspaceId, 'success'])
   const row = result.rows[0]
   if (!row?.artifact_data || !row.mime_type) return null
   return { bytes: row.artifact_data, mimeType: row.mime_type }

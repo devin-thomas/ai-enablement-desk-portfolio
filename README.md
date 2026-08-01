@@ -90,6 +90,23 @@ Changes on the `cloudflare-preview` branch can be deployed to an isolated
 npm run deploy:preview
 ```
 
+The preview Worker proxies only the server's supported `/api/*` routes and
+`/health` to Azure. Provision its origin URL and credential as preview-scoped
+Worker secrets before deploying; the credential is sent to Azure only in the
+`x-aed-origin-credential` request header:
+
+```bash
+npx wrangler secret put AZURE_API_BASE_URL --env preview
+npx wrangler secret put AZURE_ORIGIN_CREDENTIAL --env preview
+```
+
+Set the same generated `AZURE_ORIGIN_CREDENTIAL` as an application secret on the Azure API container. The API rejects direct `/api/*` and detailed `/health` requests without it; `/health/live` and `/health/ready` remain credential-free for platform probes. Use independent random values of at least 32 characters for `AZURE_ORIGIN_CREDENTIAL` and `WORKSPACE_COOKIE_SECRET`.
+
+Keep production values separate. The commands above intentionally include
+`--env preview` and do not modify the production Worker. Production secrets
+must be provisioned independently through an approved production change; never
+reuse or commit either environment's credential.
+
 ## Optional providers
 
 The application remains usable when every provider is absent and reports the degraded state in `/health` and the UI.

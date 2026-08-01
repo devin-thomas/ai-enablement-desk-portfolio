@@ -23,7 +23,9 @@ try {
     currentProcess: null, intendedUsers: ['Demo tester'], dataSources: ['Synthetic data'], syntheticDemoSafe: true,
   }) })
   if (created.status !== 201) throw new Error(`Request smoke check failed with HTTP ${created.status}.`)
-  const list = await (await fetch(`${baseUrl}/api/requests`)).json() as { requests: unknown[] }
+  const workspaceCookie = created.headers.get('set-cookie')?.split(';')[0]
+  if (!workspaceCookie) throw new Error('Workspace cookie was not issued.')
+  const list = await (await fetch(`${baseUrl}/api/requests`, { headers: { cookie: workspaceCookie } })).json() as { requests: unknown[] }
   if (list.requests.length !== 1) throw new Error('Database smoke check did not retrieve the request.')
   console.log('Smoke test passed: web build, server, embedded Postgres, and degraded provider boundaries are healthy.')
 } finally {

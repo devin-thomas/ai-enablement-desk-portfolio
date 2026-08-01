@@ -21,7 +21,7 @@ describe('restart-safe demo persistence', () => {
   it('reloads a submitted request after the server and database are reopened', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'aed-restart-'))
     directories.push(directory)
-    const env: ServerEnv = { nodeEnv: 'test', port: 3001, demoMode: true, demoDatabasePath: join(directory, 'database'), geminiModel: 'stub-model', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 1000 }
+    const env: ServerEnv = { nodeEnv: 'test', port: 3001, demoMode: true, demoDatabasePath: join(directory, 'database'), workspaceCookieSecret: 'restart-test-workspace-secret', geminiModel: 'stub-model', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 1000 }
 
     const first = await createApp({ env })
     apps.push(first)

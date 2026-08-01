@@ -1,7 +1,7 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.6/schema.json",
   "files": {
-    "includes": ["src/**", "apps/**", "packages/**", "scripts/**", "vite.config.ts", "!src/**/*.css", "!**/node_modules/**", "!**/dist/**"]
+    "includes": ["src/**", "apps/**", "packages/**", "scripts/**", "worker/**", "vite.config.ts", "!src/**/*.css", "!**/node_modules/**", "!**/dist/**"]
   },
   "linter": {
     "enabled": true,
