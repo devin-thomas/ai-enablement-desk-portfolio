@@ -174,13 +174,15 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = if (deployWo
           identity: 'system'
         }
       ]
-      secrets: [
+      secrets: concat([
         { name: 'database-url', value: databaseUrl }
         { name: 'workspace-signing-key', value: workspaceSigningKey }
         { name: 'origin-shared-secret', value: originSharedSecret }
+      ], empty(geminiApiKey) ? [] : [
         { name: 'gemini-api-key', value: geminiApiKey }
+      ], empty(fishApiKey) ? [] : [
         { name: 'fish-api-key', value: fishApiKey }
-      ]
+      ])
     }
     template: {
       containers: [
@@ -191,7 +193,7 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = if (deployWo
             cpu: json('0.5')
             memory: '1Gi'
           }
-          env: [
+          env: concat([
             { name: 'HOST', value: '0.0.0.0' }
             { name: 'PORT', value: '3001' }
             { name: 'NODE_ENV', value: 'production' }
@@ -199,12 +201,14 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = if (deployWo
             { name: 'DATABASE_URL', secretRef: 'database-url' }
             { name: 'WORKSPACE_COOKIE_SECRET', secretRef: 'workspace-signing-key' }
             { name: 'AZURE_ORIGIN_CREDENTIAL', secretRef: 'origin-shared-secret' }
-            { name: 'GEMINI_API_KEY', secretRef: 'gemini-api-key' }
-            { name: 'FISH_AUDIO_API_KEY', secretRef: 'fish-api-key' }
             { name: 'GEMINI_PUBLIC_LAUNCH_APPROVED', value: string(settings.geminiPublicLaunchApproved) }
             { name: 'FISH_VOICE_PREFLIGHT_APPROVED', value: string(settings.fishVoicePreflightApproved) }
             { name: 'AUDIO_BRIEFINGS_ENABLED', value: string(settings.audioBriefingsEnabled) }
-          ]
+          ], empty(geminiApiKey) ? [] : [
+            { name: 'GEMINI_API_KEY', secretRef: 'gemini-api-key' }
+          ], empty(fishApiKey) ? [] : [
+            { name: 'FISH_AUDIO_API_KEY', secretRef: 'fish-api-key' }
+          ])
           probes: [
             { type: 'Startup', httpGet: { path: '/health/live', port: 3001 }, initialDelaySeconds: 5, periodSeconds: 5, timeoutSeconds: 3, failureThreshold: 24 }
             { type: 'Liveness', httpGet: { path: '/health/live', port: 3001 }, initialDelaySeconds: 15, periodSeconds: 10, timeoutSeconds: 3, failureThreshold: 3 }
