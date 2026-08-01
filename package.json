@@ -13,6 +13,7 @@
     "dev:server": "npm run dev -w @ai-enablement/server",
     "start:server": "node --import tsx apps/server/src/index.ts",
     "db:migrate": "npm run db:migrate -w @ai-enablement/server",
+    "workspaces:expire": "npm run workspaces:expire -w @ai-enablement/server",
     "build": "tsc -b && vite build",
     "build:recruiter": "tsc -b && vite build --mode recruiter",
     "deploy:recruiter": "npm run build:recruiter && npx --yes wrangler@4.116.0 deploy",

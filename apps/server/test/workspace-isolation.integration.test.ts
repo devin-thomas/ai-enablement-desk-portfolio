@@ -72,9 +72,9 @@ describe('anonymous workspace isolation', () => {
     const clarification = { questionId: 'CQ-WORKSPACE', answer: 'A named synthetic reviewer validates it.', actorType: 'requester', actorName: 'Demo Requester' }
     expect((await requestJson(`/api/requests/${requestA}/clarifications`, cookieB, { method: 'POST', body: clarification, expectStatus: 404 })).code).toBe('request_not_found')
     expect((await requestJson(`/api/requests/${requestA}/decisions`, cookieB, { expectStatus: 404 })).code).toBe('request_not_found')
-    expect((await requestJson(`/api/requests/${requestA}/decisions`, cookieB, { method: 'POST', body: {
-      reviewerName: 'Hostile Reviewer', rationale: 'This cross-workspace decision must never be recorded.', decision: 'defer', analysisRunId: analysisA.id, expectedVersion: detailA.version,
-    }, expectStatus: 404 })).code).toBe('request_not_found')
+    expect(
+      (await requestJson(`/api/requests/${requestA}/decisions`, cookieB, { method: 'POST', body: { reviewerName: 'Hostile Reviewer', rationale: 'This cross-workspace decision must never be recorded.', decision: 'defer', analysisRunId: analysisA.id, expectedVersion: detailA.version }, expectStatus: 404 })).code
+    ).toBe('request_not_found')
     expect((await requestJson(`/api/requests/${requestA}/audit-events`, cookieB, { expectStatus: 404 })).error).toBe('Request not found')
     expect((await requestJson(`/api/requests/${requestA}/automations`, cookieB, { expectStatus: 404 })).code).toBe('request_not_found')
     expect((await requestJson(`/api/requests/${requestA}/automations/${automationA}/retry`, cookieB, { method: 'POST', expectStatus: 404 })).code).toBe('attempt_not_found')
@@ -105,6 +105,33 @@ describe('anonymous workspace isolation', () => {
     const denied = await nativeFetch(`${baseUrl}/api/requests`, { method: 'OPTIONS', headers: { origin: 'https://attacker.example' } })
     expect(denied.headers.get('access-control-allow-origin')).toBeNull()
     expect(denied.headers.get('access-control-allow-credentials')).toBeNull()
+  })
+
+  it('refreshes only successful use and replaces an exactly expired workspace without reviving it', async () => {
+    const created = await nativeFetch(`${baseUrl}/api/requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(submission) })
+    const cookie = cookieFrom(created)
+    const workspaceId = cookie.slice('aed_workspace='.length).split('.')[0]
+
+    await app.database.query("update workspaces set last_activity_at = transaction_timestamp() - interval '6 days' where id = $1", [workspaceId])
+    const beforeFailure = (await app.database.query<{ last_activity_at: Date | string }>('select last_activity_at from workspaces where id = $1', [workspaceId])).rows[0].last_activity_at
+    await requestJson('/api/requests/00000000-0000-4000-8000-000000000099', cookie, { expectStatus: 404 })
+    const afterFailure = (await app.database.query<{ last_activity_at: Date | string }>('select last_activity_at from workspaces where id = $1', [workspaceId])).rows[0].last_activity_at
+    expect(new Date(afterFailure).toISOString()).toBe(new Date(beforeFailure).toISOString())
+    expect((await app.database.query('select id from workspace_activity_leases where workspace_id = $1', [workspaceId])).rows).toHaveLength(0)
+
+    await requestJson('/api/requests', cookie)
+    const afterSuccess = (await app.database.query<{ refreshed: boolean }>("select last_activity_at > transaction_timestamp() - interval '1 minute' as refreshed from workspaces where id = $1", [workspaceId])).rows[0]
+    expect(afterSuccess.refreshed).toBe(true)
+    expect((await app.database.query('select id from workspace_activity_leases where workspace_id = $1', [workspaceId])).rows).toHaveLength(0)
+
+    await app.database.query("update workspaces set last_activity_at = transaction_timestamp() - interval '7 days' where id = $1", [workspaceId])
+    const replacement = await nativeFetch(`${baseUrl}/api/requests`, { headers: { cookie } })
+    expect(replacement.status).toBe(200)
+    const replacementCookie = cookieFrom(replacement)
+    const replacementId = replacementCookie.slice('aed_workspace='.length).split('.')[0]
+    expect(replacementId).not.toBe(workspaceId)
+    expect((await replacement.json()).requests).toEqual([])
+    expect((await app.database.query('select id from workspaces where id = $1', [workspaceId])).rows).toHaveLength(1)
   })
 
   async function requestJson(path: string, cookie: string, options: { method?: string; body?: unknown; expectStatus?: number } = {}): Promise<any> {

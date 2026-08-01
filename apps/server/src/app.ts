@@ -30,11 +30,41 @@ export type AppInstance = {
   appliedMigrations: string[]
 }
 
-function sendJson(response: ServerResponse, status: number, body: unknown): void {
+type ResponseSink = {
+  setHeader(name: string, value: number | string | readonly string[]): void
+  writeHead(status: number, headers?: Record<string, string>): void
+  end(chunk?: string | Buffer): void
+}
+
+function sendJson(response: ResponseSink, status: number, body: unknown): void {
   response.writeHead(status, {
     'content-type': 'application/json; charset=utf-8',
   })
   response.end(JSON.stringify(body))
+}
+
+class BufferedResponse implements ResponseSink {
+  private status = 200
+  private readonly headers: Record<string, string> = {}
+  private body: Buffer | undefined
+
+  setHeader(name: string, value: number | string | readonly string[]): void {
+    this.headers[name] = Array.isArray(value) ? value.join(', ') : String(value)
+  }
+
+  writeHead(status: number, headers?: Record<string, string>): void {
+    this.status = status
+    Object.assign(this.headers, headers)
+  }
+
+  end(chunk?: string | Buffer): void {
+    this.body = chunk === undefined ? undefined : Buffer.from(chunk)
+  }
+
+  flush(response: ServerResponse): void {
+    response.writeHead(this.status, this.headers)
+    response.end(this.body)
+  }
 }
 
 const developmentOrigins = new Set(['http://localhost:5173', 'http://127.0.0.1:5173'])
@@ -98,12 +128,12 @@ async function loadDemoSubmissions(): Promise<RequestSubmission[]> {
   }))
 }
 
-async function handleRequest(request: IncomingMessage, response: ServerResponse, database: Database, env: ServerEnv, analysisProvider: AnalysisProvider, audioProvider: AudioProvider, automations: AutomationDispatcher, workspaces: WorkspaceSigner): Promise<void> {
-  applyDevelopmentCors(request, response, env)
+async function handleRequest(request: IncomingMessage, httpResponse: ServerResponse, database: Database, env: ServerEnv, analysisProvider: AnalysisProvider, audioProvider: AudioProvider, workspaces: WorkspaceSigner): Promise<void> {
+  applyDevelopmentCors(request, httpResponse, env)
   const url = new URL(request.url ?? '/', 'http://localhost')
 
   if (request.method === 'GET' && url.pathname === '/health/live') {
-    sendJson(response, 200, { ok: true, service: 'ai-enablement-server' })
+    sendJson(httpResponse, 200, { ok: true, service: 'ai-enablement-server' })
     return
   }
   if (request.method === 'GET' && url.pathname === '/health/ready') {
@@ -111,19 +141,19 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse,
       await database.query('select 1 as ready')
     } catch (error) {
       console.error('Readiness database check failed', error)
-      sendJson(response, 503, { ok: false, service: 'ai-enablement-server', persistence: 'unavailable' })
+      sendJson(httpResponse, 503, { ok: false, service: 'ai-enablement-server', persistence: 'unavailable' })
       return
     }
-    sendJson(response, 200, { ok: true, service: 'ai-enablement-server', persistence: env.databaseUrl ? 'supabase-postgres' : 'embedded-postgres' })
+    sendJson(httpResponse, 200, { ok: true, service: 'ai-enablement-server', persistence: env.databaseUrl ? 'supabase-postgres' : 'embedded-postgres' })
     return
   }
   const requiresOriginAuthentication = url.pathname === '/health' || url.pathname.startsWith('/api/')
   if (requiresOriginAuthentication && env.azureOriginCredential && !hasValidOriginCredential(request, env.azureOriginCredential)) {
-    sendJson(response, 403, { error: 'Origin authentication failed' })
+    sendJson(httpResponse, 403, { error: 'Origin authentication failed' })
     return
   }
   if (request.method === 'OPTIONS') {
-    sendJson(response, 204, null)
+    sendJson(httpResponse, 204, null)
     return
   }
   if (request.method === 'GET' && url.pathname === '/health') {
@@ -131,16 +161,22 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse,
       await database.query('select 1 as ready')
     } catch (error) {
       console.error('Readiness database check failed', error)
-      sendJson(response, 503, { ok: false, service: 'ai-enablement-server', persistence: 'unavailable' })
+      sendJson(httpResponse, 503, { ok: false, service: 'ai-enablement-server', persistence: 'unavailable' })
       return
     }
     const n8n = !env.n8nRequestSubmittedWebhook && !env.n8nDecisionRecordedWebhook ? 'disabled' : env.n8nWebhookSecret ? 'configured' : 'unavailable'
     const gemini = !env.geminiApiKey ? 'unavailable_key' : env.geminiPublicLaunchApproved ? 'configured' : 'approval_required'
     const fishAudio = !env.audioBriefingsEnabled ? 'disabled' : !env.fishAudioApiKey ? 'unavailable_key' : env.fishVoicePreflightApproved ? 'configured' : 'approval_required'
-    sendJson(response, 200, { ok: true, service: 'ai-enablement-server', demoMode: env.demoMode, persistence: env.databaseUrl ? 'supabase-postgres' : 'embedded-postgres', providers: { gemini, n8n, fishAudio } })
+    sendJson(httpResponse, 200, { ok: true, service: 'ai-enablement-server', demoMode: env.demoMode, persistence: env.databaseUrl ? 'supabase-postgres' : 'embedded-postgres', providers: { gemini, n8n, fishAudio } })
     return
   }
-  const workspaceId = workspaces.resolve(request, response)
+  const lease = await workspaces.resolve(database, request, httpResponse)
+  const workspaceId = lease.workspaceId
+  const bufferedResponse = new BufferedResponse()
+  const response = bufferedResponse
+  const automations = new AutomationDispatcher(database, env)
+  try {
+    await (async () => {
   if (request.method === 'POST' && url.pathname === '/api/requests') {
     const submission = requestSubmissionSchema.parse(await readJson(request))
     const created = await createRequest(database, workspaceId, submission)
@@ -228,6 +264,13 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse,
     return
   }
   throw new HttpError(404, 'Route not found')
+    })()
+  } catch (error) {
+    await workspaces.complete(database, lease, false)
+    throw error
+  }
+  await workspaces.complete(database, lease, true)
+  bufferedResponse.flush(httpResponse)
 }
 
 export async function createApp(options: AppOptions = {}): Promise<AppInstance> {
@@ -236,14 +279,13 @@ export async function createApp(options: AppOptions = {}): Promise<AppInstance> 
     if (!env.workspaceCookieSecret || env.workspaceCookieSecret.length < 32) throw new Error('WORKSPACE_COOKIE_SECRET must be at least 32 characters in production')
     if (!env.azureOriginCredential || env.azureOriginCredential.length < 32) throw new Error('AZURE_ORIGIN_CREDENTIAL must be at least 32 characters in production')
   }
-  const database = options.database ?? await createDatabase(env)
+  const database = options.database ?? (await createDatabase(env))
   const analysisProvider = options.analysisProvider ?? new GeminiAnalysisProvider(env)
   const audioProvider = options.audioProvider ?? new FishAudioProvider(env)
-  const automations = new AutomationDispatcher(database, env)
   const workspaces = new WorkspaceSigner(env.workspaceCookieSecret ?? randomBytes(32).toString('base64url'), env.nodeEnv === 'production')
   const appliedMigrations = await migrate(database, options.migrationsDirectory)
   const server = createServer((request, response) => {
-    void handleRequest(request, response, database, env, analysisProvider, audioProvider, automations, workspaces).catch((error: unknown) => {
+    void handleRequest(request, response, database, env, analysisProvider, audioProvider, workspaces).catch((error: unknown) => {
       if (error instanceof ZodError) {
         sendJson(response, 422, { error: 'Request validation failed', details: error.issues })
         return

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "db:migrate": "tsx src/migrate.ts",
+    "workspaces:expire": "tsx src/expireWorkspaces.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
