@@ -30,9 +30,9 @@ export const isRecruiterDemo = import.meta.env.MODE === 'recruiter'
 const healthSchema = z.object({
   ok: z.boolean(),
   providers: z.object({
-    gemini: z.enum(['configured', 'unavailable_key', 'demo_fixture']),
+    gemini: z.enum(['configured', 'unavailable_key', 'approval_required', 'demo_fixture']),
     n8n: z.enum(['configured', 'disabled', 'unavailable_secret', 'demo_evidence']),
-    fishAudio: z.enum(['configured', 'disabled', 'unavailable_key']),
+    fishAudio: z.enum(['configured', 'disabled', 'unavailable_key', 'approval_required']),
   }),
 })
 

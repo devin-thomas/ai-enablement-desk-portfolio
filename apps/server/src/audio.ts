@@ -13,35 +13,125 @@ export interface AudioProvider {
 }
 
 export class AudioProviderError extends Error {
-  constructor(readonly code: 'unavailable_key' | 'rate_limited' | 'payment_required' | 'invalid_audio' | 'provider_error', message: string) { super(message) }
+  constructor(readonly code: 'unavailable_key' | 'approval_required' | 'rate_limited' | 'payment_required' | 'invalid_audio' | 'provider_unavailable' | 'provider_error', message: string) { super(message) }
 }
+
+const FISH_MODEL = 's2.1-pro-free'
+const FISH_REFERENCE_ID = '670480b2d7cd40f299c68789a4a77c4c'
+const FISH_MAX_CONCURRENT_REQUESTS = 5
+const FISH_MAX_QUEUED_REQUESTS = 10
+const FISH_MAX_TEXT_CHARACTERS = 4_000
+const FISH_MAX_AUDIO_BYTES = 5 * 1024 * 1024
+const FISH_MIME_TYPE = 'audio/mpeg'
+
+class Semaphore {
+  private active = 0
+  private readonly waiters: Array<() => void> = []
+
+  async acquire(): Promise<() => void> {
+    if (this.active >= FISH_MAX_CONCURRENT_REQUESTS) {
+      if (this.waiters.length >= FISH_MAX_QUEUED_REQUESTS) throw new AudioProviderError('provider_unavailable', 'Fish Audio is at capacity.')
+      await new Promise<void>((resolve) => this.waiters.push(resolve))
+    }
+    this.active += 1
+    return () => {
+      this.active -= 1
+      this.waiters.shift()?.()
+    }
+  }
+}
+
+const fishSemaphore = new Semaphore()
 
 export class FishAudioProvider implements AudioProvider {
   readonly name = 'fish-audio'
-  readonly model: string
-  constructor(private readonly env: ServerEnv) { this.model = env.fishAudioModel ?? 's2-pro' }
+  readonly model = FISH_MODEL
+  constructor(private readonly env: ServerEnv) {
+    if (env.fishAudioModel && env.fishAudioModel !== FISH_MODEL) throw new Error(`FISH_AUDIO_MODEL must be ${FISH_MODEL}`)
+  }
 
   async generate(text: string): Promise<AudioProviderResult> {
     if (!this.env.fishAudioApiKey) throw new AudioProviderError('unavailable_key', 'Fish Audio is not configured.')
-    let response: Response
+    if (!this.env.fishVoicePreflightApproved) throw new AudioProviderError('approval_required', 'Fish Audio voice preflight approval is required.')
+    if (text.length > FISH_MAX_TEXT_CHARACTERS) throw new AudioProviderError('provider_error', 'Fish Audio briefing text exceeds the configured limit.')
+    const release = await fishSemaphore.acquire()
     try {
-      response = await fetch('https://api.fish.audio/v1/tts', {
-        method: 'POST',
-        headers: { authorization: `Bearer ${this.env.fishAudioApiKey}`, 'content-type': 'application/json', model: this.model },
-        body: JSON.stringify({ text, format: 'mp3', normalize: true }),
-        signal: AbortSignal.timeout(30_000),
-      })
-    } catch {
-      throw new AudioProviderError('provider_error', 'Fish Audio request failed.')
+      try {
+        const response = await fetch('https://api.fish.audio/v1/tts', {
+          method: 'POST',
+          headers: { authorization: `Bearer ${this.env.fishAudioApiKey}`, 'content-type': 'application/json', model: FISH_MODEL },
+          body: JSON.stringify({ text, reference_id: FISH_REFERENCE_ID, format: 'mp3', normalize: true }),
+          signal: AbortSignal.timeout(this.env.fishAudioTimeoutMs ?? 30_000),
+        })
+        if (response.status === 429) throw new AudioProviderError('rate_limited', 'Fish Audio rate limit reached.')
+        if (response.status === 402) throw new AudioProviderError('payment_required', 'Fish Audio billing is required.')
+        if ([401, 403, 404, 422].includes(response.status)) throw new AudioProviderError('provider_error', 'Fish Audio rejected the configured request.')
+        if (!response.ok) throw new AudioProviderError('provider_unavailable', 'Fish Audio is unavailable.')
+        const declaredLength = Number(response.headers.get('content-length'))
+        if (Number.isFinite(declaredLength) && declaredLength > FISH_MAX_AUDIO_BYTES) throw new AudioProviderError('invalid_audio', 'Fish Audio response exceeded the configured limit.')
+        const bytes = await readBoundedBody(response, FISH_MAX_AUDIO_BYTES)
+        if (!isMp3(bytes)) throw new AudioProviderError('invalid_audio', 'Fish Audio returned invalid audio bytes.')
+        return { bytes, mimeType: FISH_MIME_TYPE, externalArtifactId: response.headers.get('x-request-id') }
+      } catch (error) {
+        if (error instanceof AudioProviderError) throw error
+        if (isAbortError(error)) throw new AudioProviderError('provider_unavailable', 'Fish Audio timed out.')
+        throw new AudioProviderError('provider_unavailable', 'Fish Audio is unavailable.')
+      }
+    } finally {
+      release()
     }
-    if (response.status === 429) throw new AudioProviderError('rate_limited', 'Fish Audio rate limit reached.')
-    if (response.status === 402) throw new AudioProviderError('payment_required', 'Fish Audio billing is required.')
-    if (!response.ok) throw new AudioProviderError('provider_error', `Fish Audio returned HTTP ${response.status}.`)
-    const mimeType = response.headers.get('content-type')?.split(';')[0] ?? ''
-    const bytes = new Uint8Array(await response.arrayBuffer())
-    if (!mimeType.startsWith('audio/') || bytes.byteLength === 0) throw new AudioProviderError('invalid_audio', 'Fish Audio returned no valid audio bytes.')
-    return { bytes, mimeType, externalArtifactId: response.headers.get('x-request-id') }
   }
+}
+
+function isMp3(bytes: Uint8Array): boolean {
+  let frameOffset = 0
+  if (bytes.byteLength >= 10 && bytes[0] === 0x49 && bytes[1] === 0x44 && bytes[2] === 0x33) {
+    if ([bytes[6], bytes[7], bytes[8], bytes[9]].some((value) => (value & 0x80) !== 0)) return false
+    const tagSize = (bytes[6] << 21) | (bytes[7] << 14) | (bytes[8] << 7) | bytes[9]
+    frameOffset = 10 + tagSize
+  }
+  if (bytes.byteLength < frameOffset + 4) return false
+  const first = bytes[frameOffset]
+  const second = bytes[frameOffset + 1]
+  const third = bytes[frameOffset + 2]
+  const version = (second >> 3) & 0x03
+  const layer = (second >> 1) & 0x03
+  const bitrate = (third >> 4) & 0x0f
+  const sampleRate = (third >> 2) & 0x03
+  if (first !== 0xff || (second & 0xe0) !== 0xe0 || version !== 3 || layer !== 1 || bitrate === 0 || bitrate === 15 || sampleRate === 3) return false
+  const bitrateKbps = [0, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256, 320][bitrate]
+  const sampleRateHz = [44_100, 48_000, 32_000][sampleRate]
+  const padding = (third >> 1) & 0x01
+  const frameLength = Math.floor((144_000 * bitrateKbps) / sampleRateHz) + padding
+  return bytes.byteLength >= frameOffset + frameLength
+}
+
+async function readBoundedBody(response: Response, limit: number): Promise<Uint8Array> {
+  if (!response.body) throw new AudioProviderError('invalid_audio', 'Fish Audio returned no audio body.')
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let length = 0
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
+    length += value.byteLength
+    if (length > limit) {
+      await reader.cancel()
+      throw new AudioProviderError('invalid_audio', 'Fish Audio response exceeded the configured limit.')
+    }
+    chunks.push(value)
+  }
+  const bytes = new Uint8Array(length)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return bytes
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof DOMException && (error.name === 'AbortError' || error.name === 'TimeoutError')
 }
 
 type ArtifactRow = {
@@ -83,7 +173,7 @@ export async function generateAudioBriefing(database: Database, env: ServerEnv, 
   try { generated = await provider.generate(analysis.summary) }
   catch (error) {
     const providerError = error instanceof AudioProviderError ? error : new AudioProviderError('provider_error', 'Audio provider failed.')
-    const status = providerError.code === 'unavailable_key' ? 'unavailable' : 'failed'
+    const status = providerError.code === 'unavailable_key' || providerError.code === 'approval_required' || providerError.code === 'provider_unavailable' ? 'unavailable' : 'failed'
     await recordAudioFailure(database, requestId, correlationId, idempotencyKey, provider, status, providerError.code)
     throw new AudioRequestError(status === 'unavailable' ? 503 : 502, providerError.message, providerError.code)
   }

@@ -123,10 +123,10 @@ export async function runAnalysis(database: Database, provider: AnalysisProvider
     const failed = await database.transaction(async (transaction) => {
       const run = await insertFailedRun(transaction, provider, requestId, providerError)
       await transaction.query("update ai_requests set status = 'analysis_failed', version = version + 1, updated_at = now() where id = $1", [requestId])
-      await insertAudit(transaction, requestId, 'system', 'Analysis service', 'analysis_failed', `Analysis failed with retryable state ${providerError.code}.`, { analysisRunId: run.id, errorCode: providerError.code })
+      await insertAudit(transaction, requestId, 'system', 'Analysis service', 'analysis_failed', `Analysis failed with provider outcome ${providerError.code}.`, { analysisRunId: run.id, errorCode: providerError.code })
       return run
     })
-    const status = providerError.code === 'unavailable_key' ? 503 : providerError.code === 'rate_limited' ? 429 : 502
+    const status = ['unavailable_key', 'approval_required', 'provider_unavailable', 'timeout'].includes(providerError.code) ? 503 : providerError.code === 'rate_limited' ? 429 : 502
     throw new AnalysisRequestError(status, providerError.message, providerError.code, failed)
   }
 }

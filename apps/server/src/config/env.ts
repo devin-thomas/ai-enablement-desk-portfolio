@@ -4,6 +4,7 @@ export type ServerEnv = {
   port: number
   demoMode: boolean
   geminiApiKey?: string
+  geminiPublicLaunchApproved?: boolean
   geminiModel: string
   geminiSchemaVersion: string
   geminiPromptVersion: string
@@ -18,6 +19,8 @@ export type ServerEnv = {
   automationRetryDelayMs?: number
   fishAudioApiKey?: string
   fishAudioModel?: string
+  fishAudioTimeoutMs?: number
+  fishVoicePreflightApproved?: boolean
   audioBriefingsEnabled?: boolean
   databaseUrl?: string
   workspaceCookieSecret?: string
@@ -39,14 +42,17 @@ export function loadEnv(): ServerEnv {
   if (!Number.isInteger(geminiTimeoutMs) || geminiTimeoutMs < 100 || geminiTimeoutMs > 120_000) throw new Error('GEMINI_TIMEOUT_MS must be between 100 and 120000')
   const automationMaxAttempts = Number(process.env.AUTOMATION_MAX_ATTEMPTS ?? 3)
   const automationRetryDelayMs = Number(process.env.AUTOMATION_RETRY_DELAY_MS ?? 250)
+  const fishAudioTimeoutMs = Number(process.env.FISH_AUDIO_TIMEOUT_MS ?? 30_000)
   if (!Number.isInteger(automationMaxAttempts) || automationMaxAttempts < 1 || automationMaxAttempts > 5) throw new Error('AUTOMATION_MAX_ATTEMPTS must be between 1 and 5')
   if (!Number.isInteger(automationRetryDelayMs) || automationRetryDelayMs < 0 || automationRetryDelayMs > 10_000) throw new Error('AUTOMATION_RETRY_DELAY_MS must be between 0 and 10000')
+  if (!Number.isInteger(fishAudioTimeoutMs) || fishAudioTimeoutMs < 100 || fishAudioTimeoutMs > 120_000) throw new Error('FISH_AUDIO_TIMEOUT_MS must be between 100 and 120000')
   return {
     nodeEnv: process.env.NODE_ENV ?? 'development',
     host,
     port: portValue,
     demoMode: process.env.DEMO_MODE !== 'false',
     geminiApiKey: optional('GEMINI_API_KEY'),
+    geminiPublicLaunchApproved: process.env.GEMINI_PUBLIC_LAUNCH_APPROVED === 'true',
     geminiModel: optional('GEMINI_MODEL') ?? 'gemini-2.5-flash-lite',
     geminiSchemaVersion: optional('GEMINI_SCHEMA_VERSION') ?? '1',
     geminiPromptVersion: optional('GEMINI_PROMPT_VERSION') ?? '1',
@@ -61,6 +67,8 @@ export function loadEnv(): ServerEnv {
     automationRetryDelayMs,
     fishAudioApiKey: optional('FISH_AUDIO_API_KEY'),
     fishAudioModel: optional('FISH_AUDIO_MODEL') ?? 's2.1-pro-free',
+    fishAudioTimeoutMs,
+    fishVoicePreflightApproved: process.env.FISH_VOICE_PREFLIGHT_APPROVED === 'true',
     audioBriefingsEnabled: process.env.AUDIO_BRIEFINGS_ENABLED === 'true',
     databaseUrl: optional('DATABASE_URL'),
     workspaceCookieSecret: optional('WORKSPACE_COOKIE_SECRET'),

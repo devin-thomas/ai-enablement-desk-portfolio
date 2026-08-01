@@ -54,7 +54,7 @@ export const analysisSchema = z.object({
 export type AIRequestAnalysis = z.infer<typeof analysisSchema>
 export type RuleEvaluation = z.infer<typeof ruleEvaluationSchema>
 
-export const analysisOutcomeSchema = z.enum(['success', 'timeout', 'rate_limited', 'invalid_output', 'unavailable_key', 'provider_error'])
+export const analysisOutcomeSchema = z.enum(['success', 'timeout', 'rate_limited', 'invalid_output', 'unavailable_key', 'approval_required', 'provider_unavailable', 'provider_error'])
 
 export const analysisRunSchema = z.object({
   id: z.string().uuid(),

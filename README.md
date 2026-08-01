@@ -111,9 +111,9 @@ reuse or commit either environment's credential.
 
 The application remains usable when every provider is absent and reports the degraded state in `/health` and the UI.
 
-- **Gemini:** set `GEMINI_API_KEY`; structured output is schema-validated before deterministic routing.
+- **Gemini:** after the anonymous-public terms/region assessment is explicitly approved, set `GEMINI_API_KEY` and `GEMINI_PUBLIC_LAUNCH_APPROVED=true`. A key alone cannot enable live calls. Structured output is schema-validated before deterministic routing.
 - **n8n:** import `automation/n8n/*.json`, configure `AED_WEBHOOK_SECRET` in n8n, and set the matching `N8N_*` values from `.env.example`.
-- **Fish Audio:** set `FISH_AUDIO_API_KEY`, keep `FISH_AUDIO_MODEL=s2.1-pro-free`, and set `AUDIO_BRIEFINGS_ENABLED=true`. The API key stays server-side.
+- **Fish Audio:** after the account owner verifies the exact voice with the authenticated non-billable model lookup, set `FISH_AUDIO_API_KEY`, `FISH_VOICE_PREFLIGHT_APPROVED=true`, keep `FISH_AUDIO_MODEL=s2.1-pro-free`, and set `AUDIO_BRIEFINGS_ENABLED=true`. A key alone cannot enable synthesis, and it stays server-side.
 
 ## Production API container
 

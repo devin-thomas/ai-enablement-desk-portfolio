@@ -135,8 +135,9 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse,
       return
     }
     const n8n = !env.n8nRequestSubmittedWebhook && !env.n8nDecisionRecordedWebhook ? 'disabled' : env.n8nWebhookSecret ? 'configured' : 'unavailable'
-    const fishAudio = !env.audioBriefingsEnabled ? 'disabled' : env.fishAudioApiKey ? 'configured' : 'unavailable'
-    sendJson(response, 200, { ok: true, service: 'ai-enablement-server', demoMode: env.demoMode, persistence: env.databaseUrl ? 'supabase-postgres' : 'embedded-postgres', providers: { gemini: env.geminiApiKey ? 'configured' : 'unavailable_key', n8n, fishAudio } })
+    const gemini = !env.geminiApiKey ? 'unavailable_key' : env.geminiPublicLaunchApproved ? 'configured' : 'approval_required'
+    const fishAudio = !env.audioBriefingsEnabled ? 'disabled' : !env.fishAudioApiKey ? 'unavailable_key' : env.fishVoicePreflightApproved ? 'configured' : 'approval_required'
+    sendJson(response, 200, { ok: true, service: 'ai-enablement-server', demoMode: env.demoMode, persistence: env.databaseUrl ? 'supabase-postgres' : 'embedded-postgres', providers: { gemini, n8n, fishAudio } })
     return
   }
   const workspaceId = workspaces.resolve(request, response)

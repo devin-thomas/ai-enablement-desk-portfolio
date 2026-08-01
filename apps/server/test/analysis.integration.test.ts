@@ -114,7 +114,7 @@ describe('analysis and clarification API', () => {
   })
 
   it.each([
-    ['timeout', 502], ['rate_limited', 429], ['invalid_output', 502], ['unavailable_key', 503],
+    ['timeout', 503], ['rate_limited', 429], ['invalid_output', 502], ['unavailable_key', 503], ['approval_required', 503],
   ] as const)('persists and exposes retryable %s failures', async (code, expectedStatus) => {
     const requestId = await createRequest()
     provider.steps.push(new AnalysisProviderError(code, `Synthetic ${code}`, 25))
