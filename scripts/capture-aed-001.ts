@@ -11,7 +11,7 @@ const webPort = 4173
 const screenshot = resolve(root, 'docs/evidence/aed-001-persisted-queue.png')
 await mkdir(resolve(root, 'docs/evidence'), { recursive: true })
 
-const env: ServerEnv = { nodeEnv: 'development', port: apiPort, demoMode: true, demoDatabasePath: 'tmp/aed-001-capture/database', geminiModel: 'gemini-2.5-flash-lite', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 20_000 }
+const env: ServerEnv = { nodeEnv: 'development', port: apiPort, demoMode: true, demoDatabasePath: 'tmp/aed-001-capture/database', geminiModel: 'gemini-3.5-flash-lite', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 20_000 }
 const app = await createApp({ env })
 await new Promise<void>((resolveListen) => app.server.listen(apiPort, '127.0.0.1', resolveListen))
 await fetch(`http://127.0.0.1:${apiPort}/api/demo/reset`, { method: 'POST' })

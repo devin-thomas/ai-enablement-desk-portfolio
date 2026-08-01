@@ -22,7 +22,7 @@ const modelAnalysis: AIRequestAnalysis = {
   assumptions: [{ value: 'Report structure is stable.', source: 'model_inference', confirmed: false }], unknowns: [], ruleEvaluation: [],
 }
 const provider: AnalysisProvider = { name: 'gemini-stub', model: 'synthetic-evidence', schemaVersion: 'analysis-v1', promptVersion: 'prompt-v1', analyze: async () => ({ analysis: modelAnalysis, latencyMs: 11 }) }
-const env: ServerEnv = { nodeEnv: 'development', port: apiPort, demoMode: true, demoDatabasePath: 'tmp/aed-003-capture/database', geminiApiKey: 'synthetic-evidence-key', geminiModel: 'gemini-2.5-flash-lite', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 20_000 }
+const env: ServerEnv = { nodeEnv: 'development', port: apiPort, demoMode: true, demoDatabasePath: 'tmp/aed-003-capture/database', geminiApiKey: 'synthetic-evidence-key', geminiModel: 'gemini-3.5-flash-lite', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 20_000 }
 const app = await createApp({ env, analysisProvider: provider })
 await new Promise<void>((resolveListen) => app.server.listen(apiPort, '127.0.0.1', resolveListen))
 await fetch(`http://127.0.0.1:${apiPort}/api/demo/reset`, { method: 'POST' })

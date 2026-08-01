@@ -4,7 +4,7 @@ import type { ServerEnv } from '../src/config/env.js'
 
 const env: ServerEnv = {
   nodeEnv: 'test', port: 3001, demoMode: true, demoDatabasePath: 'unused', geminiApiKey: 'synthetic-test-key',
-  geminiModel: 'gemini-2.5-flash-lite', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 1000, geminiPublicLaunchApproved: true,
+  geminiModel: 'gemini-3.5-flash-lite', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 1000, geminiPublicLaunchApproved: true,
 }
 
 describe('Gemini provider contract validation', () => {
@@ -31,7 +31,7 @@ describe('Gemini provider contract validation', () => {
     expect(fetchMock).toHaveBeenCalledTimes(2)
     const request = fetchMock.mock.calls[0]?.[0] as string
     const options = fetchMock.mock.calls[0]?.[1] as RequestInit
-    expect(request).toContain('/v1beta/models/gemini-2.5-flash-lite:generateContent')
+    expect(request).toContain('/v1beta/models/gemini-3.5-flash-lite:generateContent')
     expect(JSON.parse(String(options.body))).toMatchObject({ generationConfig: { responseMimeType: 'application/json', responseSchema: expect.any(Object) } })
     const schema = JSON.parse(String(options.body)).generationConfig.responseSchema
     expect(schema).toMatchObject({ type: 'object', properties: { currentProcess: { type: 'string', nullable: true } } })
@@ -47,7 +47,7 @@ describe('Gemini provider contract validation', () => {
   })
 
   it('rejects a configured model other than the stable Gemini contract', () => {
-    expect(() => new GeminiAnalysisProvider({ ...env, geminiModel: 'gemini-2.5-flash' })).toThrow('GEMINI_MODEL must be gemini-2.5-flash-lite')
+    expect(() => new GeminiAnalysisProvider({ ...env, geminiModel: 'gemini-3.1-flash-lite' })).toThrow('GEMINI_MODEL must be gemini-3.5-flash-lite')
   })
 
   it('does not call Gemini until the explicit public launch gate is approved', async () => {

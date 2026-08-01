@@ -33,7 +33,7 @@ type GeminiResponse = {
 
 const GEMINI_TRANSIENT_ATTEMPTS = 2
 const GEMINI_RETRY_BASE_DELAY_MS = 100
-const GEMINI_MODEL = 'gemini-2.5-flash-lite'
+const GEMINI_MODEL = 'gemini-3.5-flash-lite'
 
 export class GeminiAnalysisProvider implements AnalysisProvider {
   readonly name = 'gemini'

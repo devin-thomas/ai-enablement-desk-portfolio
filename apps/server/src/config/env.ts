@@ -53,7 +53,7 @@ export function loadEnv(): ServerEnv {
     demoMode: process.env.DEMO_MODE !== 'false',
     geminiApiKey: optional('GEMINI_API_KEY'),
     geminiPublicLaunchApproved: process.env.GEMINI_PUBLIC_LAUNCH_APPROVED === 'true',
-    geminiModel: optional('GEMINI_MODEL') ?? 'gemini-2.5-flash-lite',
+    geminiModel: optional('GEMINI_MODEL') ?? 'gemini-3.5-flash-lite',
     geminiSchemaVersion: optional('GEMINI_SCHEMA_VERSION') ?? '1',
     geminiPromptVersion: optional('GEMINI_PROMPT_VERSION') ?? '1',
     geminiTimeoutMs,
