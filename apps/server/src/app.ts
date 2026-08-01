@@ -128,6 +128,10 @@ async function loadDemoSubmissions(): Promise<RequestSubmission[]> {
   }))
 }
 
+function isDemoResetEnabled(env: ServerEnv): boolean {
+  return env.demoResetEnabled === true && (env.demoMode || env.nodeEnv === 'production')
+}
+
 async function handleRequest(request: IncomingMessage, httpResponse: ServerResponse, database: Database, env: ServerEnv, analysisProvider: AnalysisProvider, audioProvider: AudioProvider, workspaces: WorkspaceSigner): Promise<void> {
   applyDevelopmentCors(request, httpResponse, env)
   const url = new URL(request.url ?? '/', 'http://localhost')
@@ -167,7 +171,14 @@ async function handleRequest(request: IncomingMessage, httpResponse: ServerRespo
     const n8n = !env.n8nRequestSubmittedWebhook && !env.n8nDecisionRecordedWebhook ? 'disabled' : env.n8nWebhookSecret ? 'configured' : 'unavailable'
     const gemini = !env.geminiApiKey ? 'unavailable_key' : env.geminiPublicLaunchApproved ? 'configured' : 'approval_required'
     const fishAudio = !env.audioBriefingsEnabled ? 'disabled' : !env.fishAudioApiKey ? 'unavailable_key' : env.fishVoicePreflightApproved ? 'configured' : 'approval_required'
-    sendJson(httpResponse, 200, { ok: true, service: 'ai-enablement-server', demoMode: env.demoMode, persistence: env.databaseUrl ? 'supabase-postgres' : 'embedded-postgres', providers: { gemini, n8n, fishAudio } })
+    sendJson(httpResponse, 200, {
+      ok: true,
+      service: 'ai-enablement-server',
+      demoMode: env.demoMode,
+      persistence: env.databaseUrl ? 'supabase-postgres' : 'embedded-postgres',
+      providers: { gemini, n8n, fishAudio },
+      features: { demoReset: isDemoResetEnabled(env) },
+    })
     return
   }
   const lease = await workspaces.resolve(database, request, httpResponse)
@@ -258,7 +269,7 @@ async function handleRequest(request: IncomingMessage, httpResponse: ServerRespo
     return
   }
   if (request.method === 'POST' && url.pathname === '/api/demo/reset') {
-    if (!env.demoMode) throw new HttpError(403, 'Demo reset is disabled outside demo mode')
+    if (!isDemoResetEnabled(env)) throw new HttpError(403, 'Demo reset is disabled')
     const requests = await resetDemo(database, workspaceId, await loadDemoSubmissions())
     sendJson(response, 200, { requests })
     return

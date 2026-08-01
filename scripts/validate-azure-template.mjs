@@ -23,6 +23,7 @@ const required = [
   "value: settings.geminiPublicLaunchApproved ? 'true' : 'false'",
   "value: settings.fishVoicePreflightApproved ? 'true' : 'false'",
   "value: settings.audioBriefingsEnabled ? 'true' : 'false'",
+  "value: settings.demoResetEnabled ? 'true' : 'false'",
   "cronExpression: '17 * * * *'",
   'replicaTimeout: 300',
   'replicaRetryLimit: 1',

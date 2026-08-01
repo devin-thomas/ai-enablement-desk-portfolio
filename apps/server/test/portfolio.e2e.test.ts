@@ -33,7 +33,7 @@ class PortfolioProvider implements AnalysisProvider {
 describe('portfolio end-to-end scenarios', () => {
   let app: AppInstance
   let baseUrl: string
-  const env: ServerEnv = { nodeEnv: 'test', port: 3001, demoMode: true, demoDatabasePath: 'unused', geminiModel: 'stub', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 1000, audioBriefingsEnabled: true }
+  const env: ServerEnv = { nodeEnv: 'test', port: 3001, demoMode: true, demoResetEnabled: true, demoDatabasePath: 'unused', geminiModel: 'stub', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 1000, audioBriefingsEnabled: true }
   const audioProvider: AudioProvider = { name: 'fish-audio-stub', model: 'synthetic-bytes', generate: async () => ({ bytes: new Uint8Array([0x49, 0x44, 0x33, 4, 0, 0, 0, 0, 0, 0]), mimeType: 'audio/mpeg', externalArtifactId: 'synthetic-audio-1' }) }
 
   beforeAll(async () => {

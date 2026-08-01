@@ -13,6 +13,7 @@ const settings = getValue('deploymentSettings')
 const secrets = getValue('applicationSecrets')
 if (!settings || typeof settings !== 'object') fail('deploymentSettings is required')
 if (!secrets || typeof secrets !== 'object') fail('applicationSecrets is required')
+if (typeof settings.demoResetEnabled !== 'boolean') fail('demoResetEnabled must be explicitly set in deploymentSettings')
 if (getValue('location') !== 'centralus') fail('location must be centralus')
 if (settings.budgetAmount !== 50) fail('budgetAmount must be 50')
 

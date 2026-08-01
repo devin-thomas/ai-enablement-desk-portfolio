@@ -90,6 +90,10 @@ Changes on the `cloudflare-preview` branch can be deployed to an isolated
 npm run deploy:preview
 ```
 
+Unlike the production recruiter demo, this isolated preview uses the normal
+server-backed build so its browser requests exercise the Azure API and approved
+live providers.
+
 The preview Worker proxies only the server's supported `/api/*` routes and
 `/health` to Azure. Provision its origin URL and credential as preview-scoped
 Worker secrets before deploying; the credential is sent to Azure only in the

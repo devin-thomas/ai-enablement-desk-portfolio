@@ -13,6 +13,7 @@ type DeploymentSettings = {
   geminiPublicLaunchApproved: bool
   fishVoicePreflightApproved: bool
   audioBriefingsEnabled: bool
+  demoResetEnabled: bool
   costActionGroupName: string
   alertEmailRecipients: string[]
   budgetName: string
@@ -204,6 +205,7 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = if (deployWo
             { name: 'GEMINI_PUBLIC_LAUNCH_APPROVED', value: settings.geminiPublicLaunchApproved ? 'true' : 'false' }
             { name: 'FISH_VOICE_PREFLIGHT_APPROVED', value: settings.fishVoicePreflightApproved ? 'true' : 'false' }
             { name: 'AUDIO_BRIEFINGS_ENABLED', value: settings.audioBriefingsEnabled ? 'true' : 'false' }
+            { name: 'DEMO_RESET_ENABLED', value: settings.demoResetEnabled ? 'true' : 'false' }
           ], empty(geminiApiKey) ? [] : [
             { name: 'GEMINI_API_KEY', secretRef: 'gemini-api-key' }
           ], empty(fishApiKey) ? [] : [

@@ -42,6 +42,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [showNewRequest, setShowNewRequest] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [demoResetEnabled, setDemoResetEnabled] = useState(isRecruiterDemo)
   const [mobileView, setMobileView] = useState<'queue' | 'detail'>('queue')
 
   const filteredRequests = useMemo(() => requests.filter((request) => {
@@ -73,7 +74,7 @@ function App() {
 
   useEffect(() => {
     void loadQueue()
-    void getHealth().then((health) => { setGeminiStatus(health.providers.gemini); setN8nStatus(health.providers.n8n); setFishStatus(health.providers.fishAudio) }).catch(() => { setGeminiStatus('unavailable'); setN8nStatus('unavailable'); setFishStatus('unavailable') })
+    void getHealth().then((health) => { setGeminiStatus(health.providers.gemini); setN8nStatus(health.providers.n8n); setFishStatus(health.providers.fishAudio); setDemoResetEnabled(health.features.demoReset) }).catch(() => { setGeminiStatus('unavailable'); setN8nStatus('unavailable'); setFishStatus('unavailable'); setDemoResetEnabled(false) })
   }, [])
 
   async function selectRequest(id: string) {
@@ -146,7 +147,7 @@ function App() {
     <main className="main-content">
       <header className="topbar"><div className="breadcrumbs"><span>Operations</span><span>/</span><strong>Intake queue</strong></div><div className="topbar-links">{isRecruiterDemo && <><a href="https://devthomas.site">Portfolio</a><a href="https://github.com/devin-thomas/ai-enablement-desk-portfolio" target="_blank" rel="noreferrer">Source <ArrowUpRight size={13} /></a></>}<div className="system-status"><span className="pulse" />{isRecruiterDemo ? 'Private browser sandbox' : 'Persisted request service'}</div></div></header>
       {isRecruiterDemo && <><section className="recruiter-guide"><div><span>PUBLIC DEMO</span><strong>Try the governed workflow in about 90 seconds.</strong><p>All requests and people are fictional. Your changes stay in this browser.</p></div><ol><li><b>1</b> Review request</li><li><b>2</b> Answer question</li><li><b>3</b> Make a decision</li></ol></section><p className="mobile-guide" role="note">Choose a request, review the recommendation, answer one question, and decide.</p></>}
-      <div className="page-heading"><div><p className="eyebrow">{isRecruiterDemo ? 'Interactive portfolio workflow' : 'Restart-safe workflow'}</p><div className="portfolio-label"><span className="portfolio-dot" />{isRecruiterDemo ? 'Public demo' : 'Persisted workflow'}</div><h1>AI request queue</h1><p className="lede">{isRecruiterDemo ? 'Ten fictional requests show how governed AI work moves from intake to review.' : 'Submitted records and audit events are loaded from Postgres.'}</p></div><div className="heading-actions"><button className="secondary-button scenario-button" disabled={resetting} onClick={() => void handleReset()}><RefreshCw size={15} />{resetting ? 'Resetting…' : 'Reset demo'}</button><button className="primary-button" onClick={() => setShowNewRequest(true)}><Plus size={17} />New request</button></div></div>
+      <div className="page-heading"><div><p className="eyebrow">{isRecruiterDemo ? 'Interactive portfolio workflow' : 'Restart-safe workflow'}</p><div className="portfolio-label"><span className="portfolio-dot" />{isRecruiterDemo ? 'Public demo' : 'Persisted workflow'}</div><h1>AI request queue</h1><p className="lede">{isRecruiterDemo ? 'Ten fictional requests show how governed AI work moves from intake to review.' : 'Submitted records and audit events are loaded from Postgres.'}</p></div><div className="heading-actions">{demoResetEnabled && <button className="secondary-button scenario-button" disabled={resetting} onClick={() => void handleReset()}><RefreshCw size={15} />{resetting ? 'Resetting…' : 'Reset demo'}</button>}<button className="primary-button" onClick={() => setShowNewRequest(true)}><Plus size={17} />New request</button></div></div>
       <section className="queue-strip"><div className="queue-stat"><span>{isRecruiterDemo ? 'Requests' : 'Persisted requests'}</span><strong>{requests.length}</strong><small>{isRecruiterDemo ? 'This browser only' : 'Current database'}</small></div><div className="queue-stat"><span>AI projects</span><strong>{requests.filter((r) => r.requestType === 'ai_project').length}</strong><small>Current session</small></div><div className="queue-stat"><span>Tool access</span><strong>{requests.filter((r) => r.requestType === 'tool_access').length}</strong><small>Current session</small></div><div className="queue-note"><Activity size={18} /><span><strong>Providers:</strong> analysis {geminiStatus.replace('_', ' ')}; automation {n8nStatus.replace('_', ' ')}; audio {fishStatus.replace('_', ' ')}.</span></div></section>
       {error && <div className="error-banner" role="alert"><span>{error}</span><button onClick={() => void loadQueue()}><RefreshCw size={14} />Retry</button></div>}
       <div className={`content-grid ${mobileView === 'detail' ? 'mobile-detail-active' : ''}`}>

@@ -9,7 +9,7 @@ import type { ServerEnv } from '../src/config/env.js'
 import { nativeFetch } from './browser.js'
 
 const env: ServerEnv = {
-  nodeEnv: 'test', port: 3001, demoMode: true, demoDatabasePath: 'unused', workspaceCookieSecret: 'test-workspace-secret',
+  nodeEnv: 'test', port: 3001, demoMode: true, demoResetEnabled: true, demoDatabasePath: 'unused', workspaceCookieSecret: 'test-workspace-secret',
   geminiModel: 'stub', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 1000, audioBriefingsEnabled: true,
 }
 

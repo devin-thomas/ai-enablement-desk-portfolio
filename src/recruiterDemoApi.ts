@@ -333,7 +333,7 @@ function parseBody(init?: RequestInit): unknown {
 export async function recruiterDemoRequest(path: string, init?: RequestInit): Promise<unknown> {
   await new Promise((resolve) => setTimeout(resolve, 180))
   const method = init?.method ?? 'GET'
-  if (path === '/health') return { ok: true, providers: { gemini: 'demo_fixture', n8n: 'demo_evidence', fishAudio: 'disabled' } }
+  if (path === '/health') return { ok: true, providers: { gemini: 'demo_fixture', n8n: 'demo_evidence', fishAudio: 'disabled' }, features: { demoReset: true } }
   if (path === '/api/demo/reset' && method === 'POST') {
     const state = freshState()
     saveState(state)

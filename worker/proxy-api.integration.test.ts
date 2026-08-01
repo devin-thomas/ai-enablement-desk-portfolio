@@ -8,7 +8,7 @@ import worker from './index'
 
 const originCredential = 'synthetic-origin-credential-for-proxy-test'
 const env: ServerEnv = {
-  nodeEnv: 'test', port: 3001, demoMode: true, demoDatabasePath: 'unused', azureOriginCredential: originCredential,
+  nodeEnv: 'test', port: 3001, demoMode: true, demoResetEnabled: true, demoDatabasePath: 'unused', azureOriginCredential: originCredential,
   workspaceCookieSecret: 'synthetic-workspace-secret-for-proxy-test', geminiModel: 'stub', geminiSchemaVersion: '1', geminiPromptVersion: '1', geminiTimeoutMs: 1000,
 }
 

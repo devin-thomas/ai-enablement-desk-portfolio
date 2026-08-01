@@ -90,6 +90,10 @@ must delete the entire dedicated resource group after
 traffic and scheduled activity are disabled; do not retain its registry, database,
 or logs as a shared resource.
 
+`deploymentSettings.demoResetEnabled` is a non-secret, explicit preview-only
+gate. It defaults to `false`; set it to `true` only in the isolated preview's
+private parameter source when the Reset demo control is required.
+
 Run `npm run validate:azure` for an offline structural and compiled-template
 check. It deliberately does not authenticate to Azure, inspect a subscription,
 build an image, or deploy anything. It requires the official standalone

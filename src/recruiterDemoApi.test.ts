@@ -16,6 +16,10 @@ describe('recruiter sandbox', () => {
     vi.stubGlobal('localStorage', storage)
   })
 
+  it('keeps demo reset available in the browser-only recruiter fixture', async () => {
+    await expect(recruiterDemoRequest('/health')).resolves.toMatchObject({ features: { demoReset: true } })
+  })
+
   it('supports the clarification and approval walkthrough in isolated browser state', async () => {
     const reset = await recruiterDemoRequest('/api/demo/reset', { method: 'POST' }) as { requests: Array<{ id: string }> }
     expect(reset.requests).toHaveLength(10)

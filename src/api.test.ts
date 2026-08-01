@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { listRequests } from './api'
+import { getHealth, listRequests } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -10,5 +10,15 @@ describe('browser API requests', () => {
 
     await expect(listRequests()).resolves.toEqual([])
     expect(request).toHaveBeenCalledWith('http://localhost:3001/api/requests', { credentials: 'include' })
+  })
+
+  it('parses the server-reported demo reset availability', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({
+      ok: true,
+      providers: { gemini: 'configured', n8n: 'disabled', fishAudio: 'disabled' },
+      features: { demoReset: false },
+    })))
+
+    await expect(getHealth()).resolves.toMatchObject({ features: { demoReset: false } })
   })
 })

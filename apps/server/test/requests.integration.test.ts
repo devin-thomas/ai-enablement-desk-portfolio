@@ -81,13 +81,39 @@ describe('request intake API', () => {
     expect(response.status).toBe(404)
   })
 
-  it('rejects demo reset outside demo mode', async () => {
-    testEnv.demoMode = false
+  it('keeps demo reset disabled by default', async () => {
+    const health = await fetch(`${baseUrl}/health`)
+    await expect(health.json()).resolves.toMatchObject({ features: { demoReset: false } })
+    const response = await fetch(`${baseUrl}/api/demo/reset`, { method: 'POST' })
+    expect(response.status).toBe(403)
+  })
+
+  it('allows the isolated production preview reset only when explicitly enabled', async () => {
+    const credential = 'synthetic-origin-credential-for-preview-tests'
+    const productionApp = await createApp({
+      database: createMemoryDatabase(),
+      env: {
+        ...testEnv,
+        nodeEnv: 'production',
+        demoMode: false,
+        demoResetEnabled: true,
+        workspaceCookieSecret: 'synthetic-workspace-cookie-secret-for-preview-tests',
+        azureOriginCredential: credential,
+      },
+    })
     try {
-      const response = await fetch(`${baseUrl}/api/demo/reset`, { method: 'POST' })
-      expect(response.status).toBe(403)
+      await new Promise<void>((resolve) => productionApp.server.listen(0, '127.0.0.1', resolve))
+      const productionBaseUrl = `http://127.0.0.1:${(productionApp.server.address() as AddressInfo).port}`
+      const headers = { 'x-aed-origin-credential': credential }
+      const health = await fetch(`${productionBaseUrl}/health`, { headers })
+      await expect(health.json()).resolves.toMatchObject({ features: { demoReset: true } })
+
+      const response = await fetch(`${productionBaseUrl}/api/demo/reset`, { method: 'POST', headers })
+      expect(response.status).toBe(200)
+      await expect(response.json()).resolves.toMatchObject({ requests: expect.arrayContaining([expect.objectContaining({ syntheticDemoSafe: true })]) })
     } finally {
-      testEnv.demoMode = true
+      await new Promise<void>((resolve) => productionApp.server.close(() => resolve()))
+      await productionApp.database.close()
     }
   })
 })

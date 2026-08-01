@@ -34,6 +34,9 @@ const healthSchema = z.object({
     n8n: z.enum(['configured', 'disabled', 'unavailable_secret', 'demo_evidence']),
     fishAudio: z.enum(['configured', 'disabled', 'unavailable_key', 'approval_required']),
   }),
+  features: z.object({
+    demoReset: z.boolean(),
+  }),
 })
 
 async function apiRequest(path: string, init?: RequestInit): Promise<unknown> {

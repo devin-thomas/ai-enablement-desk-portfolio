@@ -3,6 +3,7 @@ export type ServerEnv = {
   host?: string
   port: number
   demoMode: boolean
+  demoResetEnabled?: boolean
   geminiApiKey?: string
   geminiPublicLaunchApproved?: boolean
   geminiModel: string
@@ -51,6 +52,7 @@ export function loadEnv(): ServerEnv {
     host,
     port: portValue,
     demoMode: process.env.DEMO_MODE !== 'false',
+    demoResetEnabled: process.env.DEMO_RESET_ENABLED === 'true',
     geminiApiKey: optional('GEMINI_API_KEY'),
     geminiPublicLaunchApproved: process.env.GEMINI_PUBLIC_LAUNCH_APPROVED === 'true',
     geminiModel: optional('GEMINI_MODEL') ?? 'gemini-3.5-flash-lite',
