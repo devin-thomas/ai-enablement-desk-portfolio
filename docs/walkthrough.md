@@ -4,7 +4,7 @@
 
 ![Persisted queue loaded from Postgres](evidence/aed-001-persisted-queue.png)
 
-The queue is loaded from the request API. Reset restores the three committed synthetic scenarios; refresh does not erase submitted records.
+The queue is loaded from the request API. Reset restores the ten committed example scenarios; refresh does not erase submitted records.
 
 ## 2. Analysis provenance and deterministic override
 

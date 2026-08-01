@@ -1,0 +1,14 @@
+{
+  "title": "Customer feedback theme detection",
+  "requestType": "ai_project",
+  "department": "Customer Experience",
+  "requesterName": "CX Requester",
+  "requesterRole": "Voice of Customer Lead",
+  "requestText": "We receive hundreds of survey comments every month and currently read a sample by hand. Could a tool group the comments into recurring themes, show the comments that support each theme, and leave the final interpretation with the CX team?",
+  "businessProblem": "Customer experience leaders receive hundreds of survey comments each month and need a consistent way to spot recurring themes.",
+  "desiredOutcome": "Group example comments into useful themes and show representative evidence for human review.",
+  "currentProcess": "Analysts read a sample of comments and summarize themes in a monthly slide deck.",
+  "intendedUsers": ["CX analysts", "Support leaders"],
+  "dataSources": ["Example survey comments"],
+  "syntheticDemoSafe": true
+}

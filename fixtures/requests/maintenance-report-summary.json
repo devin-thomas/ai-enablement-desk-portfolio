@@ -2,12 +2,13 @@
   "title": "Maintenance field report triage",
   "requestType": "ai_project",
   "department": "Operations Excellence",
-  "requesterName": "Synthetic Maintenance Requester",
+  "requesterName": "Maintenance Requester",
   "requesterRole": "Maintenance Manager",
+  "requestText": "Each morning I get a stack of field reports from the maintenance teams. I need help pulling out the urgent equipment issues and organizing them so the reliability engineers can review the important items first. Please do not make the escalation decision for us; I want the source report and the reason for each suggested priority to remain visible.",
   "businessProblem": "Maintenance managers receive long field reports each morning and need to identify urgent issues quickly.",
   "desiredOutcome": "Summarize important issues and highlight which ones need immediate attention.",
   "currentProcess": "Managers read reports manually and escalate issues from memory.",
   "intendedUsers": ["Maintenance managers", "Reliability engineers"],
-  "dataSources": ["Synthetic field reports"],
+  "dataSources": ["Example field reports"],
   "syntheticDemoSafe": true
 }

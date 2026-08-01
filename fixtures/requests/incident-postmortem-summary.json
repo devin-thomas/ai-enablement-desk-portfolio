@@ -1,0 +1,14 @@
+{
+  "title": "Incident postmortem evidence summary",
+  "requestType": "ai_project",
+  "department": "Platform Reliability",
+  "requesterName": "Reliability Requester",
+  "requesterRole": "Incident Manager",
+  "requestText": "After an incident, I spend hours pulling timestamps and follow-up items from several notes and alert streams. Please create a cited draft timeline and a list of unresolved actions for the postmortem review, while keeping uncertain timestamps clearly marked.",
+  "businessProblem": "Incident managers spend too long consolidating timelines and follow-up evidence from example operational notes.",
+  "desiredOutcome": "Create a cited draft timeline and list unresolved follow-ups for a human-reviewed postmortem.",
+  "currentProcess": "Incident managers collect notes from several channels and assemble a timeline manually.",
+  "intendedUsers": ["Incident managers", "Reliability engineers"],
+  "dataSources": ["Example incident notes", "Example service alerts"],
+  "syntheticDemoSafe": true
+}

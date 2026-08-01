@@ -9,6 +9,7 @@ export const requestSubmissionSchema = z.object({
   department: z.string().trim().min(1).max(120),
   requesterName: z.string().trim().min(1).max(120),
   requesterRole: z.string().trim().min(1).max(120),
+  requestText: z.string().trim().min(20).max(6000).optional(),
   businessProblem: z.string().trim().min(20).max(4000),
   desiredOutcome: z.string().trim().min(5).max(2000),
   currentProcess: z.string().trim().max(2000).nullable(),

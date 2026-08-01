@@ -1,0 +1,14 @@
+{
+  "title": "Internal policy question routing",
+  "requestType": "tool_access",
+  "department": "Operations Enablement",
+  "requesterName": "Policy Requester",
+  "requesterRole": "Operations Analyst",
+  "requestText": "People keep asking where to send policy questions, and the answers in chat are not always reliable. I want a way to match a question to the right policy owner and source section. It should route the question, not answer on behalf of the policy team.",
+  "businessProblem": "Operations staff need a faster way to find the right owner for policy questions without receiving an unverified policy answer.",
+  "desiredOutcome": "Route example questions to the correct policy owner and link the source section for human response.",
+  "currentProcess": "Employees search several folders or ask a general operations channel for help.",
+  "intendedUsers": ["Operations staff"],
+  "dataSources": ["Example policy index", "Example questions"],
+  "syntheticDemoSafe": true
+}

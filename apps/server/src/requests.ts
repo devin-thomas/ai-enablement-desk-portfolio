@@ -44,6 +44,7 @@ function mapRequest(row: RequestRow): RequestRecord {
     department: row.department,
     requesterName: row.requester_name,
     requesterRole: row.requester_role,
+    requestText: row.raw_request.requestText ?? row.business_problem,
     businessProblem: row.business_problem,
     desiredOutcome: row.desired_outcome,
     currentProcess: row.current_process,

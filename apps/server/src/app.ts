@@ -66,6 +66,13 @@ async function loadDemoSubmissions(): Promise<RequestSubmission[]> {
     'fixtures/requests/maintenance-report-summary.json',
     'fixtures/requests/tool-access-request.json',
     'fixtures/requests/unsafe-sensitive-data-request.json',
+    'fixtures/requests/customer-feedback-themes.json',
+    'fixtures/requests/support-article-draft.json',
+    'fixtures/requests/invoice-exception-triage.json',
+    'fixtures/requests/meeting-action-items.json',
+    'fixtures/requests/accessibility-issue-intake.json',
+    'fixtures/requests/policy-question-routing.json',
+    'fixtures/requests/incident-postmortem-summary.json',
   ]
   return Promise.all(fixtures.map(async (path) => {
     const value = JSON.parse(await readFile(resolve(repositoryRoot, path), 'utf8'))

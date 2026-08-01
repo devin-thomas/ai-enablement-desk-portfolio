@@ -1,0 +1,14 @@
+{
+  "title": "Meeting action-item extraction",
+  "requestType": "ai_project",
+  "department": "Program Management",
+  "requesterName": "Program Requester",
+  "requesterRole": "Program Coordinator",
+  "requestText": "Our recurring program meetings produce action items, but they are easy to lose in different note formats. I would like proposed owners and due dates pulled from the notes for confirmation before anything is published. If a note is unclear, flag it instead of inventing an owner.",
+  "businessProblem": "Program teams lose follow-up tasks when meeting notes are captured inconsistently across recurring workstreams.",
+  "desiredOutcome": "Extract proposed action items from example notes and ask owners to confirm them before publishing.",
+  "currentProcess": "The meeting facilitator writes tasks manually and sends a follow-up message after each meeting.",
+  "intendedUsers": ["Program coordinators", "Workstream leads"],
+  "dataSources": ["Example meeting notes"],
+  "syntheticDemoSafe": true
+}

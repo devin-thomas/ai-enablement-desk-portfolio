@@ -1,0 +1,14 @@
+{
+  "title": "Accessibility issue intake helper",
+  "requestType": "ai_project",
+  "department": "Digital Experience",
+  "requesterName": "Accessibility Requester",
+  "requesterRole": "Accessibility Program Lead",
+  "requestText": "Accessibility reports arrive with different levels of detail. Can we turn them into a consistent triage draft that keeps the reporter's wording, preserves evidence links, and helps the product team reproduce the issue without pretending that an automated severity rating is final?",
+  "businessProblem": "Accessibility reports arrive with uneven detail, making it harder for product teams to reproduce and prioritize issues.",
+  "desiredOutcome": "Normalize example reports into a triage summary while preserving the reporter wording and evidence links.",
+  "currentProcess": "Accessibility specialists rewrite reports into a shared issue template before product review.",
+  "intendedUsers": ["Accessibility specialists", "Product teams"],
+  "dataSources": ["Example accessibility reports"],
+  "syntheticDemoSafe": true
+}

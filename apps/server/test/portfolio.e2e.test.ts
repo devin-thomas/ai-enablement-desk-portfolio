@@ -61,7 +61,7 @@ describe('portfolio end-to-end scenarios', () => {
     expect(audio.artifact).toMatchObject({ status: 'success', byteLength: 10 })
 
     const reset = await (await fetch(`${baseUrl}/api/demo/reset`, { method: 'POST' })).json()
-    expect(reset.requests).toHaveLength(3)
+    expect(reset.requests).toHaveLength(10)
     const artifacts = await (await fetch(`${baseUrl}/api/requests/${requestId}/artifacts`)).json()
     expect(artifacts.artifacts).toEqual([])
   })

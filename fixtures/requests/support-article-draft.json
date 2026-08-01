@@ -1,0 +1,14 @@
+{
+  "title": "Support article draft assistant",
+  "requestType": "ai_project",
+  "department": "Support Enablement",
+  "requesterName": "Enablement Requester",
+  "requesterRole": "Knowledge Manager",
+  "requestText": "When a case is resolved, the useful explanation often stays in the ticket. I want a first draft of an internal help article from the case notes, including links back to the source and a review step so a knowledge manager approves the wording before it is published.",
+  "businessProblem": "Support specialists spend time turning resolved cases into first drafts for internal knowledge articles.",
+  "desiredOutcome": "Draft an article from example case notes while keeping source citations and a human approval step.",
+  "currentProcess": "Knowledge managers review case notes and write articles manually after weekly case audits.",
+  "intendedUsers": ["Knowledge managers", "Support specialists"],
+  "dataSources": ["Example case notes", "Approved support taxonomy"],
+  "syntheticDemoSafe": true
+}

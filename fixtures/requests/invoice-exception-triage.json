@@ -1,0 +1,14 @@
+{
+  "title": "Invoice exception triage",
+  "requestType": "ai_project",
+  "department": "Finance Operations",
+  "requesterName": "Finance Requester",
+  "requesterRole": "Accounts Payable Analyst",
+  "requestText": "Please help us sort invoice exceptions into the right review queues. The system must not approve or pay anything; it should only compare the invoice with the purchase order, explain the likely mismatch, and let an accounts payable analyst make the decision.",
+  "businessProblem": "Accounts payable analysts manually inspect invoice exceptions and need to prioritize routine mismatches for review.",
+  "desiredOutcome": "Classify example invoice exceptions and route them to the right queue without approving payments.",
+  "currentProcess": "Analysts compare invoices with purchase orders and assign queues using a shared spreadsheet.",
+  "intendedUsers": ["Accounts payable analysts"],
+  "dataSources": ["Example invoices", "Example purchase orders"],
+  "syntheticDemoSafe": true
+}

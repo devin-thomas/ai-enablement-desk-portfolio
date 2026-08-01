@@ -18,6 +18,7 @@ describe('recruiter sandbox', () => {
 
   it('supports the clarification and approval walkthrough in isolated browser state', async () => {
     const reset = await recruiterDemoRequest('/api/demo/reset', { method: 'POST' }) as { requests: Array<{ id: string }> }
+    expect(reset.requests).toHaveLength(10)
     const requestId = reset.requests[0].id
     const first = await recruiterDemoRequest(`/api/requests/${requestId}/analyses`, { method: 'POST' }) as { analysisRun: { id: string; systemRecommendation: string } }
     expect(first.analysisRun.systemRecommendation).toBe('needs_clarification')
