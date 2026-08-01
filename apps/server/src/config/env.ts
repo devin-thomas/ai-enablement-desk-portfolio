@@ -1,5 +1,6 @@
 export type ServerEnv = {
   nodeEnv: string
+  host?: string
   port: number
   demoMode: boolean
   geminiApiKey?: string
@@ -28,6 +29,8 @@ function optional(name: string): string | undefined {
 }
 
 export function loadEnv(): ServerEnv {
+  const host = process.env.HOST?.trim() || '0.0.0.0'
+  if (/\s/.test(host)) throw new Error('HOST must not contain whitespace')
   const portValue = Number(process.env.PORT ?? 3001)
   if (!Number.isInteger(portValue) || portValue < 1 || portValue > 65535) throw new Error('PORT must be a valid TCP port')
   const geminiTimeoutMs = Number(process.env.GEMINI_TIMEOUT_MS ?? 20_000)
@@ -38,6 +41,7 @@ export function loadEnv(): ServerEnv {
   if (!Number.isInteger(automationRetryDelayMs) || automationRetryDelayMs < 0 || automationRetryDelayMs > 10_000) throw new Error('AUTOMATION_RETRY_DELAY_MS must be between 0 and 10000')
   return {
     nodeEnv: process.env.NODE_ENV ?? 'development',
+    host,
     port: portValue,
     demoMode: process.env.DEMO_MODE !== 'false',
     geminiApiKey: optional('GEMINI_API_KEY'),

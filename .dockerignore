@@ -1,0 +1,12 @@
+**
+!Dockerfile
+!package.json
+!package-lock.json
+!apps/server/package.json
+!apps/server/src/**
+!packages/contracts/package.json
+!packages/contracts/src/**
+!packages/domain/package.json
+!packages/domain/src/**
+!database/migrations/**
+!fixtures/requests/**

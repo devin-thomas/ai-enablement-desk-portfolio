@@ -98,6 +98,22 @@ The application remains usable when every provider is absent and reports the deg
 - **n8n:** import `automation/n8n/*.json`, configure `AED_WEBHOOK_SECRET` in n8n, and set the matching `N8N_*` values from `.env.example`.
 - **Fish Audio:** set `FISH_AUDIO_API_KEY`, keep `FISH_AUDIO_MODEL=s2.1-pro-free`, and set `AUDIO_BRIEFINGS_ENABLED=true`. The API key stays server-side.
 
+## Production API container
+
+The API image runs as the unprivileged `node` user, listens on `0.0.0.0:3001`, and applies pending database migrations before it starts accepting traffic. Build it from the repository root:
+
+```bash
+docker build -t ai-enablement-desk-api .
+```
+
+Set `DATABASE_URL`, `GEMINI_API_KEY`, and other provider values through the container platform; do not copy an `.env` file into the image. For Azure Container Apps, set ingress `targetPort` to `3001` and configure HTTP probes on that port:
+
+- Startup: `GET /health/ready` (the listener opens only after migrations complete).
+- Readiness: `GET /health/ready` (returns `503` when PostgreSQL is unavailable).
+- Liveness: `GET /health/live` (does not restart a healthy process during a dependency outage).
+
+The existing `GET /health` remains a detailed, database-backed readiness response. The image also supports a release-time migration command override with `npm run db:migrate`; its default Node process repeats the idempotent migration check before listening and handles Container Apps' `SIGTERM` directly.
+
 `npm run verify:aed-004:live` performs a live provider verification when n8n and Fish are configured. It can consume provider quota and is intentionally excluded from the offline quality gate.
 
 ## Verification

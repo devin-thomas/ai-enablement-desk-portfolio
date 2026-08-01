@@ -87,7 +87,18 @@ async function handleRequest(request: IncomingMessage, response: ServerResponse,
   }
   const url = new URL(request.url ?? '/', 'http://localhost')
 
-  if (request.method === 'GET' && url.pathname === '/health') {
+  if (request.method === 'GET' && url.pathname === '/health/live') {
+    sendJson(response, 200, { ok: true, service: 'ai-enablement-server' })
+    return
+  }
+  if (request.method === 'GET' && (url.pathname === '/health' || url.pathname === '/health/ready')) {
+    try {
+      await database.query('select 1 as ready')
+    } catch (error) {
+      console.error('Readiness database check failed', error)
+      sendJson(response, 503, { ok: false, service: 'ai-enablement-server', persistence: 'unavailable' })
+      return
+    }
     const n8n = !env.n8nRequestSubmittedWebhook && !env.n8nDecisionRecordedWebhook ? 'disabled' : env.n8nWebhookSecret ? 'configured' : 'unavailable'
     const fishAudio = !env.audioBriefingsEnabled ? 'disabled' : env.fishAudioApiKey ? 'configured' : 'unavailable'
     sendJson(response, 200, { ok: true, service: 'ai-enablement-server', demoMode: env.demoMode, persistence: env.databaseUrl ? 'supabase-postgres' : 'embedded-postgres', providers: { gemini: env.geminiApiKey ? 'configured' : 'unavailable_key', n8n, fishAudio } })
