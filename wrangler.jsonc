@@ -12,6 +12,12 @@
       "custom_domain": true
     }
   ],
+  "env": {
+    "preview": {
+      "workers_dev": true,
+      "routes": []
+    }
+  },
   "observability": {
     "enabled": true
   }

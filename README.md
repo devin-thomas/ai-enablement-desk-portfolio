@@ -74,6 +74,13 @@ npm run build:recruiter
 npm run deploy:recruiter
 ```
 
+Changes on the `cloudflare-preview` branch can be deployed to an isolated
+`*.workers.dev` Worker without changing the production custom domain:
+
+```bash
+npm run deploy:preview
+```
+
 ## Optional providers
 
 The application remains usable when every provider is absent and reports the degraded state in `/health` and the UI.
