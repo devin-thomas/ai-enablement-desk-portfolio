@@ -21,7 +21,7 @@ type AutomationRow = {
 
 type DispatchInput = {
   requestId: string
-  automationName: Exclude<AutomationName, 'generate-audio-briefing'>
+  automationName: Exclude<AutomationName, 'generate-audio-briefing' | 'generate-original-request-narration'>
   idempotencyKey: string
   payload: Record<string, unknown>
 }
@@ -60,7 +60,7 @@ export class AutomationDispatcher {
     const result = await this.database.query<AutomationRow>('select automation_attempts.* from automation_attempts join ai_requests on ai_requests.id = automation_attempts.request_id where automation_attempts.id = $1 and automation_attempts.request_id = $2 and ai_requests.workspace_id = $3', [attemptId, requestId, workspaceId])
     if (result.rows.length === 0) throw new AutomationRequestError(404, 'Automation attempt not found', 'attempt_not_found')
     const row = result.rows[0]
-    if (row.automation_name === 'generate-audio-briefing') throw new AutomationRequestError(409, 'Retry audio from the audio briefing action.', 'audio_retry_required')
+    if (row.automation_name === 'generate-audio-briefing' || row.automation_name === 'generate-original-request-narration') throw new AutomationRequestError(409, 'Retry audio from its dedicated narration action.', 'audio_retry_required')
     if (!['failed', 'retrying', 'disabled', 'unavailable'].includes(row.status)) throw new AutomationRequestError(409, `Automation cannot be retried from ${row.status}.`, 'retry_not_allowed')
     return this.dispatch({ requestId, automationName: row.automation_name, idempotencyKey: row.idempotency_key, payload: parsePayload(row.payload) }, true)
   }

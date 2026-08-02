@@ -17,6 +17,7 @@
     "build": "tsc -b && vite build",
     "build:recruiter": "tsc -b && vite build --mode recruiter",
     "deploy:recruiter": "npm run build:recruiter && npx --yes wrangler@4.116.0 deploy",
+    "deploy:production": "npm run build && npx --yes wrangler@4.116.0 deploy",
     "deploy:preview": "npm run build && npx --yes wrangler@4.116.0 deploy --env preview",
     "typecheck": "tsc -b && npm run typecheck:worker && npm run typecheck -w @ai-enablement/server",
     "typecheck:worker": "tsc -p worker/tsconfig.json",

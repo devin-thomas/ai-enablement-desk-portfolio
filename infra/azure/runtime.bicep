@@ -34,6 +34,8 @@ param workspaceSigningKey string = ''
 @secure()
 param originSharedSecret string = ''
 @secure()
+param originSharedSecretSecondary string = ''
+@secure()
 param geminiApiKey string = ''
 @secure()
 param fishApiKey string = ''
@@ -183,6 +185,8 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = if (deployWo
         { name: 'gemini-api-key', value: geminiApiKey }
       ], empty(fishApiKey) ? [] : [
         { name: 'fish-api-key', value: fishApiKey }
+      ], empty(originSharedSecretSecondary) ? [] : [
+        { name: 'origin-shared-secret-secondary', value: originSharedSecretSecondary }
       ])
     }
     template: {
@@ -210,6 +214,8 @@ resource apiContainerApp 'Microsoft.App/containerApps@2024-03-01' = if (deployWo
             { name: 'GEMINI_API_KEY', secretRef: 'gemini-api-key' }
           ], empty(fishApiKey) ? [] : [
             { name: 'FISH_AUDIO_API_KEY', secretRef: 'fish-api-key' }
+          ], empty(originSharedSecretSecondary) ? [] : [
+            { name: 'AZURE_ORIGIN_CREDENTIAL_SECONDARY', secretRef: 'origin-shared-secret-secondary' }
           ])
           probes: [
             { type: 'Startup', httpGet: { path: '/health/live', port: 3001 }, initialDelaySeconds: 5, periodSeconds: 5, timeoutSeconds: 3, failureThreshold: 24 }

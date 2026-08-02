@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { getHealth, listRequests } from './api'
+import { generateOriginalRequestNarration, getHealth, listRequests } from './api'
 
 afterEach(() => vi.unstubAllGlobals())
 
@@ -20,5 +20,14 @@ describe('browser API requests', () => {
     })))
 
     await expect(getHealth()).resolves.toMatchObject({ features: { demoReset: false } })
+  })
+
+  it('uses the dedicated original request narration action', async () => {
+    const artifact = { id: 'a4f8527e-aefd-481c-a266-7bf629f42095', requestId: 'e4d59cd2-aa47-4ee3-b793-364d47a2658c', artifactType: 'original_request_narration', provider: 'fish/stub', status: 'success', mimeType: 'audio/mpeg', byteLength: 12, externalArtifactId: null, sourceAnalysisRunId: null, createdAt: '2026-08-01T00:00:00.000Z', contentUrl: '/api/artifacts/a4f8527e-aefd-481c-a266-7bf629f42095/content' }
+    const request = vi.fn(async () => Response.json({ artifact }))
+    vi.stubGlobal('fetch', request)
+
+    await expect(generateOriginalRequestNarration(artifact.requestId)).resolves.toEqual(artifact)
+    expect(request).toHaveBeenCalledWith(`http://localhost:3001/api/requests/${artifact.requestId}/original-request-narrations`, { method: 'POST', credentials: 'include' })
   })
 })

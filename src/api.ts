@@ -118,3 +118,7 @@ export async function listArtifacts(requestId: string): Promise<ArtifactRecord[]
 export async function generateAudioBriefing(requestId: string): Promise<ArtifactRecord> {
   return artifactResponseSchema.parse(await apiRequest(`/api/requests/${requestId}/audio-briefings`, { method: 'POST' })).artifact
 }
+
+export async function generateOriginalRequestNarration(requestId: string): Promise<ArtifactRecord> {
+  return artifactResponseSchema.parse(await apiRequest(`/api/requests/${requestId}/original-request-narrations`, { method: 'POST' })).artifact
+}

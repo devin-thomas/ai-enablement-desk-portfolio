@@ -43,7 +43,7 @@ describe('optional audio briefing', () => {
   async function createAndAnalyze(syntheticDemoSafe = true) {
     const created = await (await fetch(`${baseUrl}/api/requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
       title: 'Synthetic audio request', requestType: 'ai_project', department: 'Operations', requesterName: 'Demo Requester', requesterRole: 'Owner',
-      businessProblem: 'A process owner needs a reviewer summary for synthetic operational records.', desiredOutcome: 'Provide a text-first review.', currentProcess: 'Manual review.',
+      requestText: 'Please narrate this synthetic original request for the demo-safe review workflow.', businessProblem: 'A process owner needs a reviewer summary for synthetic operational records.', desiredOutcome: 'Provide a text-first review.', currentProcess: 'Manual review.',
       intendedUsers: ['Demo reviewers'], dataSources: ['Synthetic records'], syntheticDemoSafe,
     }) })).json()
     await fetch(`${baseUrl}/api/requests/${created.request.id}/analyses`, { method: 'POST' })
@@ -82,5 +82,34 @@ describe('optional audio briefing', () => {
     const response = await fetch(`${baseUrl}/api/requests/${requestId}/audio-briefings`, { method: 'POST' })
     expect(response.status).toBe(403)
     expect((await (await fetch(`${baseUrl}/api/requests/${requestId}/artifacts`)).json()).artifacts).toHaveLength(0)
+  })
+
+  it('creates one independently identified narration of the original request with audit and automation evidence', async () => {
+    await start(true)
+    const createResponse = await fetch(`${baseUrl}/api/requests`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({
+      title: 'Synthetic narrated request', requestType: 'ai_project', department: 'Operations', requesterName: 'Demo Requester', requesterRole: 'Owner',
+      requestText: 'Please narrate this synthetic original request without requiring an analysis first.', businessProblem: 'A synthetic narration test.', desiredOutcome: 'Provide a text-first review.', currentProcess: 'Manual review.',
+      intendedUsers: ['Demo reviewers'], dataSources: ['Synthetic records'], syntheticDemoSafe: true,
+    }) })
+    const requestId = (await createResponse.json()).request.id as string
+
+    const first = await fetch(`${baseUrl}/api/requests/${requestId}/original-request-narrations`, { method: 'POST' })
+    const second = await fetch(`${baseUrl}/api/requests/${requestId}/original-request-narrations`, { method: 'POST' })
+    expect(first.status).toBe(201)
+    expect(second.status).toBe(201)
+    expect((await first.json()).artifact).toMatchObject({ artifactType: 'original_request_narration', sourceAnalysisRunId: null, status: 'success' })
+    const artifacts = (await (await fetch(`${baseUrl}/api/requests/${requestId}/artifacts`)).json()).artifacts
+    expect(artifacts).toHaveLength(1)
+    expect(artifacts[0]).toMatchObject({ artifactType: 'original_request_narration', sourceAnalysisRunId: null })
+    const automations = (await (await fetch(`${baseUrl}/api/requests/${requestId}/automations`)).json()).automationAttempts
+    expect(automations).toEqual(expect.arrayContaining([expect.objectContaining({ automationName: 'generate-original-request-narration', idempotencyKey: `original-request-narration:${requestId}`, status: 'success' })]))
+    const auditEvents = (await (await fetch(`${baseUrl}/api/requests/${requestId}/audit-events`)).json()).auditEvents
+    expect(auditEvents).toEqual(expect.arrayContaining([expect.objectContaining({ eventType: 'original_request_narration_generated' })]))
+  })
+
+  it('prohibits original request narration for requests not explicitly marked synthetic demo-safe', async () => {
+    await start(true)
+    const requestId = await createAndAnalyze(false)
+    expect((await fetch(`${baseUrl}/api/requests/${requestId}/original-request-narrations`, { method: 'POST' })).status).toBe(403)
   })
 })

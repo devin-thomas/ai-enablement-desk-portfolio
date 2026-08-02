@@ -80,6 +80,16 @@ describe('Azure origin proxy Worker', () => {
     await expect(response.json()).resolves.toEqual({ error: 'validation_failed' })
   })
 
+  it('allows the dedicated original request narration action', async () => {
+    const upstreamFetch = vi.fn(async () => Response.json({ artifact: { id: 'created' } }, { status: 201 }))
+    vi.stubGlobal('fetch', upstreamFetch)
+
+    const response = await worker.fetch(new Request('https://portfolio.example/api/requests/11111111-1111-4111-8111-111111111111/original-request-narrations', { method: 'POST' }), environment(), {} as ExecutionContext)
+
+    expect(response.status).toBe(201)
+    expect((upstreamFetch.mock.calls[0]?.[0] as Request).method).toBe('POST')
+  })
+
   it('does not follow or expose origin redirects carrying protected headers', async () => {
     const upstreamFetch = vi.fn(async () => new Response(null, { status: 302, headers: { location: 'https://unexpected.example/collect' } }))
     vi.stubGlobal('fetch', upstreamFetch)

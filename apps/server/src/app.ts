@@ -13,7 +13,7 @@ import { GeminiAnalysisProvider, type AnalysisProvider } from './analysisProvide
 import { AnalysisRequestError, answerClarification, listAnalyses, runAnalysis } from './analyses.js'
 import { DecisionRequestError, listDecisions, recordDecision } from './decisions.js'
 import { AutomationDispatcher, AutomationRequestError, listAutomations } from './automations.js'
-import { AudioRequestError, FishAudioProvider, generateAudioBriefing, getArtifactContent, listArtifacts, type AudioProvider } from './audio.js'
+import { AudioRequestError, FishAudioProvider, generateAudioBriefing, generateOriginalRequestNarration, getArtifactContent, listArtifacts, type AudioProvider } from './audio.js'
 import { WorkspaceSigner } from './workspace.js'
 
 type AppOptions = {
@@ -80,10 +80,10 @@ function applyDevelopmentCors(request: IncomingMessage, response: ServerResponse
   response.setHeader('vary', 'Origin')
 }
 
-function hasValidOriginCredential(request: IncomingMessage, expected: string): boolean {
+function hasValidOriginCredential(request: IncomingMessage, expectedValues: readonly string[]): boolean {
   const supplied = request.headers['x-aed-origin-credential']
-  if (typeof supplied !== 'string' || supplied.length !== expected.length) return false
-  return timingSafeEqual(Buffer.from(supplied), Buffer.from(expected))
+  if (typeof supplied !== 'string') return false
+  return expectedValues.some((expected) => supplied.length === expected.length && timingSafeEqual(Buffer.from(supplied), Buffer.from(expected)))
 }
 
 async function readJson(request: IncomingMessage): Promise<unknown> {
@@ -152,7 +152,8 @@ async function handleRequest(request: IncomingMessage, httpResponse: ServerRespo
     return
   }
   const requiresOriginAuthentication = url.pathname === '/health' || url.pathname.startsWith('/api/')
-  if (requiresOriginAuthentication && env.azureOriginCredential && !hasValidOriginCredential(request, env.azureOriginCredential)) {
+  const originCredentials = [env.azureOriginCredential, env.azureOriginCredentialSecondary].filter((value): value is string => Boolean(value))
+  if (requiresOriginAuthentication && originCredentials.length > 0 && !hasValidOriginCredential(request, originCredentials)) {
     sendJson(httpResponse, 403, { error: 'Origin authentication failed' })
     return
   }
@@ -248,6 +249,11 @@ async function handleRequest(request: IncomingMessage, httpResponse: ServerRespo
     sendJson(response, 201, { artifact: await generateAudioBriefing(database, env, audioProvider, workspaceId, audioMatch[1]) })
     return
   }
+  const originalNarrationMatch = url.pathname.match(/^\/api\/requests\/([0-9a-f-]+)\/original-request-narrations$/i)
+  if (originalNarrationMatch && request.method === 'POST') {
+    sendJson(response, 201, { artifact: await generateOriginalRequestNarration(database, env, audioProvider, workspaceId, originalNarrationMatch[1]) })
+    return
+  }
   const artifactsMatch = url.pathname.match(/^\/api\/requests\/([0-9a-f-]+)\/artifacts$/i)
   if (artifactsMatch && request.method === 'GET') {
     sendJson(response, 200, { artifacts: await listArtifacts(database, workspaceId, artifactsMatch[1]) })
@@ -289,6 +295,7 @@ export async function createApp(options: AppOptions = {}): Promise<AppInstance> 
   if (env.nodeEnv === 'production') {
     if (!env.workspaceCookieSecret || env.workspaceCookieSecret.length < 32) throw new Error('WORKSPACE_COOKIE_SECRET must be at least 32 characters in production')
     if (!env.azureOriginCredential || env.azureOriginCredential.length < 32) throw new Error('AZURE_ORIGIN_CREDENTIAL must be at least 32 characters in production')
+    if (env.azureOriginCredentialSecondary && env.azureOriginCredentialSecondary.length < 32) throw new Error('AZURE_ORIGIN_CREDENTIAL_SECONDARY must be at least 32 characters when configured')
   }
   const database = options.database ?? (await createDatabase(env))
   const analysisProvider = options.analysisProvider ?? new GeminiAnalysisProvider(env)

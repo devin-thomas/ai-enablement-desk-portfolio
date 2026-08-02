@@ -37,6 +37,17 @@ describe('Azure origin authentication', () => {
     await expect(authorized.json()).resolves.toEqual({ requests: [] })
   })
 
+  it('accepts an independently configured secondary origin credential', async () => {
+    const secondaryCredential = 'synthetic-secondary-origin-credential'
+    app = await createApp({ database: createMemoryDatabase(), env: { ...env, azureOriginCredentialSecondary: secondaryCredential } })
+    await new Promise<void>((resolve) => app?.server.listen(0, '127.0.0.1', resolve))
+    const baseUrl = `http://127.0.0.1:${(app.server.address() as AddressInfo).port}`
+
+    expect((await fetch(`${baseUrl}/api/requests`, { headers: { 'x-aed-origin-credential': credential } })).status).toBe(200)
+    expect((await fetch(`${baseUrl}/api/requests`, { headers: { 'x-aed-origin-credential': secondaryCredential } })).status).toBe(200)
+    expect((await fetch(`${baseUrl}/api/requests`, { headers: { 'x-aed-origin-credential': 'synthetic-invalid-origin-credential' } })).status).toBe(403)
+  })
+
   it('requires strong workspace and origin credentials in production', async () => {
     const productionEnv: ServerEnv = { ...env, nodeEnv: 'production' }
     const database = createMemoryDatabase()
@@ -44,6 +55,7 @@ describe('Azure origin authentication', () => {
     try {
       await expect(createApp({ database, env: { ...productionEnv, workspaceCookieSecret: undefined } })).rejects.toThrow('WORKSPACE_COOKIE_SECRET must be at least 32 characters in production')
       await expect(createApp({ database, env: { ...productionEnv, azureOriginCredential: undefined } })).rejects.toThrow('AZURE_ORIGIN_CREDENTIAL must be at least 32 characters in production')
+      await expect(createApp({ database, env: { ...productionEnv, azureOriginCredentialSecondary: 'too-short' } })).rejects.toThrow('AZURE_ORIGIN_CREDENTIAL_SECONDARY must be at least 32 characters when configured')
     } finally {
       await database.close()
     }

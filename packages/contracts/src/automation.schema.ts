@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const automationStatusSchema = z.enum(['pending', 'retrying', 'success', 'failed', 'disabled', 'unavailable'])
-export const automationNameSchema = z.enum(['request-submitted', 'request-decision-recorded', 'generate-audio-briefing'])
+export const automationNameSchema = z.enum(['request-submitted', 'request-decision-recorded', 'generate-audio-briefing', 'generate-original-request-narration'])
 
 export const automationAttemptSchema = z.object({
   id: z.string().uuid(),
@@ -21,13 +21,13 @@ export const automationAttemptSchema = z.object({
 export const artifactSchema = z.object({
   id: z.string().uuid(),
   requestId: z.string().uuid(),
-  artifactType: z.literal('audio_briefing'),
+  artifactType: z.enum(['audio_briefing', 'original_request_narration']),
   provider: z.string().min(1),
   status: z.literal('success'),
   mimeType: z.string().startsWith('audio/'),
   byteLength: z.number().int().positive(),
   externalArtifactId: z.string().nullable(),
-  sourceAnalysisRunId: z.string().uuid(),
+  sourceAnalysisRunId: z.string().uuid().nullable(),
   createdAt: z.string().datetime(),
   contentUrl: z.string().min(1),
 })

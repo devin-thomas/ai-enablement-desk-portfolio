@@ -18,7 +18,7 @@ function allowedMethods(pathname: string): readonly string[] | null {
   if (/^\/api\/requests\/[0-9a-f-]+$/i.test(pathname)) return ['GET', 'OPTIONS']
   if (/^\/api\/requests\/[0-9a-f-]+\/(analyses|decisions)$/i.test(pathname)) return ['GET', 'POST', 'OPTIONS']
   if (/^\/api\/requests\/[0-9a-f-]+\/(audit-events|automations|artifacts)$/i.test(pathname)) return ['GET', 'OPTIONS']
-  if (/^\/api\/requests\/[0-9a-f-]+\/(clarifications|audio-briefings)$/i.test(pathname)) return ['POST', 'OPTIONS']
+  if (/^\/api\/requests\/[0-9a-f-]+\/(clarifications|audio-briefings|original-request-narrations)$/i.test(pathname)) return ['POST', 'OPTIONS']
   if (/^\/api\/requests\/[0-9a-f-]+\/automations\/[0-9a-f-]+\/retry$/i.test(pathname)) return ['POST', 'OPTIONS']
   if (/^\/api\/artifacts\/[0-9a-f-]+\/content$/i.test(pathname)) return ['GET', 'OPTIONS']
   return null

@@ -137,13 +137,13 @@ function isAbortError(error: unknown): boolean {
 type ArtifactRow = {
   id: string
   request_id: string
-  artifact_type: 'audio_briefing'
+  artifact_type: 'audio_briefing' | 'original_request_narration'
   provider: string
   status: 'success'
   mime_type: string
   byte_length: number
   external_artifact_id: string | null
-  source_analysis_run_id: string
+  source_analysis_run_id: string | null
   created_at: Date | string
   artifact_data?: Uint8Array
 }
@@ -194,11 +194,57 @@ export async function generateAudioBriefing(database: Database, env: ServerEnv, 
   })
 }
 
-async function recordAudioFailure(database: Database, requestId: string, correlationId: string, idempotencyKey: string, provider: AudioProvider, status: 'disabled' | 'unavailable' | 'failed', code: string): Promise<void> {
+export async function generateOriginalRequestNarration(database: Database, env: ServerEnv, provider: AudioProvider, workspaceId: string, requestId: string): Promise<ArtifactRecord> {
+  const requestResult = await database.query<{ id: string; synthetic_demo_safe: boolean; narration_text: string }>(`select id, synthetic_demo_safe,
+    coalesce(nullif(raw_request->>'requestText', ''), business_problem) as narration_text
+    from ai_requests where id = $1 and workspace_id = $2`, [requestId, workspaceId])
+  if (requestResult.rows.length === 0) throw new AudioRequestError(404, 'Request not found', 'request_not_found')
+  const request = requestResult.rows[0]
+  if (!request.synthetic_demo_safe) throw new AudioRequestError(403, 'Audio is restricted to explicitly synthetic demo-safe requests.', 'request_not_demo_safe')
+  const correlationId = randomUUID()
+  const idempotencyKey = `original-request-narration:${requestId}`
+  const existing = await database.query<ArtifactRow>("select * from artifacts where request_id = $1 and artifact_type = 'original_request_narration' and status = 'success' limit 1", [requestId])
+  if (existing.rows[0]) return mapArtifact(existing.rows[0])
+  if (!env.audioBriefingsEnabled) {
+    await recordAudioFailure(database, requestId, correlationId, idempotencyKey, provider, 'disabled', 'audio_disabled', 'generate-original-request-narration', 'original_request_narration_unavailable', 'Original request narration was not generated.')
+    throw new AudioRequestError(409, 'Audio narrations are disabled; the original request remains available as text.', 'audio_disabled')
+  }
+
+  let generated: AudioProviderResult
+  try { generated = await provider.generate(request.narration_text) }
+  catch (error) {
+    const providerError = error instanceof AudioProviderError ? error : new AudioProviderError('provider_error', 'Audio provider failed.')
+    const status = providerError.code === 'unavailable_key' || providerError.code === 'approval_required' || providerError.code === 'provider_unavailable' ? 'unavailable' : 'failed'
+    await recordAudioFailure(database, requestId, correlationId, idempotencyKey, provider, status, providerError.code, 'generate-original-request-narration', 'original_request_narration_unavailable', 'Original request narration was not generated.')
+    throw new AudioRequestError(status === 'unavailable' ? 503 : 502, providerError.message, providerError.code)
+  }
+  if (!generated.mimeType.startsWith('audio/') || generated.bytes.byteLength === 0) {
+    await recordAudioFailure(database, requestId, correlationId, idempotencyKey, provider, 'failed', 'invalid_audio', 'generate-original-request-narration', 'original_request_narration_unavailable', 'Original request narration was not generated.')
+    throw new AudioRequestError(502, 'No valid audio was produced.', 'invalid_audio')
+  }
+
+  return database.transaction(async (transaction) => {
+    const result = await transaction.query<ArtifactRow>(`insert into artifacts (
+      request_id, artifact_type, provider, status, artifact_data, mime_type, byte_length, external_artifact_id
+    ) values ($1,'original_request_narration',$2,'success',$3,$4,$5,$6)
+    on conflict (request_id, artifact_type) where artifact_type = 'original_request_narration' and status = 'success' do nothing returning *`, [requestId, `${provider.name}/${provider.model}`, Buffer.from(generated.bytes), generated.mimeType, generated.bytes.byteLength, generated.externalArtifactId])
+    const row = result.rows[0] ?? (await transaction.query<ArtifactRow>("select * from artifacts where request_id = $1 and artifact_type = 'original_request_narration' and status = 'success' limit 1", [requestId])).rows[0]
+    if (!row) throw new Error('Original request narration artifact was not persisted')
+    const artifact = mapArtifact(row)
+    if (result.rows[0]) {
+      await insertAutomationAttempt(transaction, { requestId, automationName: 'generate-original-request-narration', workflowVersion: 'trusted-server-v1', correlationId, idempotencyKey, status: 'success', externalExecutionId: generated.externalArtifactId, payload: { artifactId: artifact.id, source: 'original_request' } })
+      await transaction.query(`insert into audit_events (request_id, actor_type, actor_name, event_type, description, metadata)
+        values ($1,'workflow',$2,'original_request_narration_generated','A real original request narration artifact was persisted.',$3::jsonb)`, [requestId, provider.name, JSON.stringify({ artifactId: artifact.id, byteLength: artifact.byteLength, mimeType: artifact.mimeType })])
+    }
+    return artifact
+  })
+}
+
+async function recordAudioFailure(database: Database, requestId: string, correlationId: string, idempotencyKey: string, provider: AudioProvider, status: 'disabled' | 'unavailable' | 'failed', code: string, automationName: 'generate-audio-briefing' | 'generate-original-request-narration' = 'generate-audio-briefing', eventType = 'audio_briefing_unavailable', description = 'Written summary retained; no audio artifact was produced.'): Promise<void> {
   await database.transaction(async (transaction) => {
-    await insertAutomationAttempt(transaction, { requestId, automationName: 'generate-audio-briefing', workflowVersion: 'trusted-server-v1', correlationId, idempotencyKey: `${idempotencyKey}:${randomUUID()}`, status, errorCode: code })
+    await insertAutomationAttempt(transaction, { requestId, automationName, workflowVersion: 'trusted-server-v1', correlationId, idempotencyKey: `${idempotencyKey}:${randomUUID()}`, status, errorCode: code })
     await transaction.query(`insert into audit_events (request_id, actor_type, actor_name, event_type, description, metadata)
-      values ($1,'workflow',$2,'audio_briefing_unavailable','Written summary retained; no audio artifact was produced.',$3::jsonb)`, [requestId, provider.name, JSON.stringify({ status, errorCode: code })])
+      values ($1,'workflow',$2,$3,$4,$5::jsonb)`, [requestId, provider.name, eventType, description, JSON.stringify({ status, errorCode: code })])
   })
 }
 

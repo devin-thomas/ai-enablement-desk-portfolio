@@ -26,6 +26,7 @@ export type ServerEnv = {
   databaseUrl?: string
   workspaceCookieSecret?: string
   azureOriginCredential?: string
+  azureOriginCredentialSecondary?: string
   demoDatabasePath: string
 }
 
@@ -75,6 +76,7 @@ export function loadEnv(): ServerEnv {
     databaseUrl: optional('DATABASE_URL'),
     workspaceCookieSecret: optional('WORKSPACE_COOKIE_SECRET'),
     azureOriginCredential: optional('AZURE_ORIGIN_CREDENTIAL'),
+    azureOriginCredentialSecondary: optional('AZURE_ORIGIN_CREDENTIAL_SECONDARY'),
     demoDatabasePath: process.env.DEMO_DATABASE_PATH?.trim() || 'data/ai-enablement-demo',
   }
 }

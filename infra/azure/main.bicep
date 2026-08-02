@@ -45,6 +45,7 @@ module previewRuntime './runtime.bicep' = {
     databaseUrl: applicationSecrets.?databaseUrl ?? ''
     workspaceSigningKey: applicationSecrets.?workspaceSigningKey ?? ''
     originSharedSecret: applicationSecrets.?originSharedSecret ?? ''
+    originSharedSecretSecondary: applicationSecrets.?originSharedSecretSecondary ?? ''
     geminiApiKey: applicationSecrets.?geminiApiKey ?? ''
     fishApiKey: applicationSecrets.?fishApiKey ?? ''
     deployWorkloads: deployWorkloads

@@ -111,6 +111,20 @@ Keep production values separate. The commands above intentionally include
 must be provisioned independently through an approved production change; never
 reuse or commit either environment's credential.
 
+The production custom domain uses the normal server-backed build and its own
+origin credential. The Azure API may accept that credential as a secondary
+secret so the isolated preview remains available during promotion:
+
+```bash
+npx wrangler secret put AZURE_API_BASE_URL
+npx wrangler secret put AZURE_ORIGIN_CREDENTIAL
+npm run deploy:production
+```
+
+Synthetic demo-safe requests expose two independent Fish Audio actions: the
+original-request narration at the top of the request, and the existing source
+briefing generated from the latest successful analysis.
+
 ## Optional providers
 
 The application remains usable when every provider is absent and reports the degraded state in `/health` and the UI.

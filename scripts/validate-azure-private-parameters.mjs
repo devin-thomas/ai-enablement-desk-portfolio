@@ -42,6 +42,7 @@ if (parsedDatabaseUrl.username === settings.postgresAdministratorLogin) fail('da
 for (const name of ['workspaceSigningKey', 'originSharedSecret']) {
   if (typeof secrets[name] !== 'string' || secrets[name].length < 32) fail(`${name} must be at least 32 characters`)
 }
+if (secrets.originSharedSecretSecondary !== undefined && (typeof secrets.originSharedSecretSecondary !== 'string' || secrets.originSharedSecretSecondary.length < 32)) fail('originSharedSecretSecondary must be at least 32 characters when configured')
 
 if (settings.geminiPublicLaunchApproved && !secrets.geminiApiKey) fail('geminiApiKey is required when Gemini launch is approved')
 if ((settings.fishVoicePreflightApproved || settings.audioBriefingsEnabled) && !secrets.fishApiKey) fail('fishApiKey is required when Fish audio is approved or enabled')

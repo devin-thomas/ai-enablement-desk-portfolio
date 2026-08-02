@@ -357,7 +357,7 @@ export async function recruiterDemoRequest(path: string, init?: RequestInit): Pr
     return { request }
   }
 
-  const match = path.match(/^\/api\/requests\/([0-9a-f-]+)(?:\/(analyses|clarifications|decisions|automations|artifacts|audio-briefings))?(?:\/([0-9a-f-]+)\/retry)?$/i)
+  const match = path.match(/^\/api\/requests\/([0-9a-f-]+)(?:\/(analyses|clarifications|decisions|automations|artifacts|audio-briefings|original-request-narrations))?(?:\/([0-9a-f-]+)\/retry)?$/i)
   if (!match) throw new Error('Demo route not found')
   const [, requestId, resource, attemptId] = match
   const request = findRequest(state, requestId)
@@ -426,5 +426,6 @@ export async function recruiterDemoRequest(path: string, init?: RequestInit): Pr
   }
   if (resource === 'artifacts' && method === 'GET') return { artifacts: state.artifacts[requestId] ?? [] }
   if (resource === 'audio-briefings' && method === 'POST') throw new Error('Audio is intentionally disabled in the public demo; verified live-provider evidence is linked in the repository.')
+  if (resource === 'original-request-narrations' && method === 'POST') throw new Error('Audio is intentionally disabled in the public demo; verified live-provider evidence is linked in the repository.')
   throw new Error('Demo operation not supported')
 }
